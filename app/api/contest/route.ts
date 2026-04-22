@@ -34,6 +34,22 @@ export async function POST(request: Request) {
       );
     }
 
+    const { error: historyError } = await supabase.from("receipt_history").insert({
+      receipt_id: input.receiptId,
+      event_type: "contested",
+      actor_type: "user",
+      actor_label: "contest",
+      note: input.reason,
+      payload: {
+        contestId: data.id,
+        category: input.category,
+      },
+    });
+
+    if (historyError) {
+      console.error("Failed to insert contest history", historyError);
+    }
+
     return NextResponse.json({
       success: true,
       contestId: data.id,

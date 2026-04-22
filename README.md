@@ -136,3 +136,8 @@ npx vercel --prod
 npm run build
 npm run start
 ```
+
+## Phase 2
+
+- Comparable precedents via vector search and retrieval-backed case matching
+- Policy mode with user-uploaded rules and organization-specific decision logic
