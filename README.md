@@ -9,6 +9,7 @@ Decision Receipt Lab is a Next.js 14 App Router project for prototyping decision
 - Tailwind CSS
 - OpenAI official SDK
 - Supabase JavaScript client
+- Upstash Redis rate limiting
 - Zod validation
 - Node `crypto` for SHA-256 receipt IDs
 
@@ -52,6 +53,8 @@ decision-receipt-lab/
    OPENAI_API_KEY=
    SUPABASE_URL=
    SUPABASE_ANON_KEY=
+   UPSTASH_REDIS_REST_URL=
+   UPSTASH_REDIS_REST_TOKEN=
    ```
 
 4. Start development:
@@ -73,7 +76,7 @@ decision-receipt-lab/
 
 - Validates input with Zod.
 - Uses OpenAI when `OPENAI_API_KEY` is present.
-- Falls back to a deterministic heuristic classifier when no API key is configured.
+- Is rate limited to 10 requests per minute per IP with Upstash Redis.
 
 `POST /api/contest`
 
@@ -99,9 +102,33 @@ create table if not exists decision_contests (
 ### Vercel
 
 1. Push the repository to GitHub.
-2. Import the repository into Vercel.
-3. Add `OPENAI_API_KEY`, `SUPABASE_URL`, and `SUPABASE_ANON_KEY` in the Vercel project settings.
-4. Deploy.
+2. Import the GitHub repository into Vercel.
+3. Add `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `UPSTASH_REDIS_REST_URL`, and `UPSTASH_REDIS_REST_TOKEN` in the Vercel project settings.
+4. Keep `main` as the production branch so pushes to `main` create production deployments.
+5. Open pull requests against `main` to get automatic preview deployments.
+6. Optionally add a custom domain in the Vercel project `Settings -> Domains` screen.
+
+Example CLI flow:
+
+```bash
+npx vercel link
+npx vercel env add OPENAI_API_KEY production
+npx vercel env add OPENAI_API_KEY preview
+npx vercel env add OPENAI_API_KEY development
+npx vercel env add SUPABASE_URL production
+npx vercel env add SUPABASE_URL preview
+npx vercel env add SUPABASE_URL development
+npx vercel env add SUPABASE_ANON_KEY production
+npx vercel env add SUPABASE_ANON_KEY preview
+npx vercel env add SUPABASE_ANON_KEY development
+npx vercel env add UPSTASH_REDIS_REST_URL production
+npx vercel env add UPSTASH_REDIS_REST_URL preview
+npx vercel env add UPSTASH_REDIS_REST_URL development
+npx vercel env add UPSTASH_REDIS_REST_TOKEN production
+npx vercel env add UPSTASH_REDIS_REST_TOKEN preview
+npx vercel env add UPSTASH_REDIS_REST_TOKEN development
+npx vercel --prod
+```
 
 ### Manual Production Build
 
