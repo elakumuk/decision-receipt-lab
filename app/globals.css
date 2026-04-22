@@ -2,20 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --background: #0a0a0b;
+  --foreground: #f5f5f5;
+}
+
 html {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
 }
 
 body {
-  background: #0a0a0a;
-  color: #f5f5f5;
+  background: var(--background);
+  color: var(--foreground);
 }
 
 * {
   box-sizing: border-box;
 }
 
+.font-mono {
+  font-family: var(--font-jetbrains-mono), "JetBrains Mono", "SFMono-Regular", monospace;
+}
+
 ::selection {
-  background: rgba(103, 232, 249, 0.22);
+  background: rgba(52, 211, 153, 0.18);
 }

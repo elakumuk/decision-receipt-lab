@@ -8,19 +8,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      colors: {
-        ink: "#1f2937",
-        paper: "#fffaf2",
-        coral: "#f97360",
-        teal: "#0f766e",
-        sand: "#f4e8d7",
+      fontFamily: {
+        sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "JetBrains Mono", "monospace"],
       },
       boxShadow: {
-        receipt: "0 24px 60px rgba(31, 41, 55, 0.12)",
-      },
-      fontFamily: {
-        sans: ["\"Avenir Next\"", "Avenir", "\"Segoe UI\"", "sans-serif"],
-        mono: ["\"SFMono-Regular\"", "\"SF Mono\"", "Menlo", "monospace"],
+        panel: "0 24px 80px rgba(0, 0, 0, 0.36)",
       },
     },
   },

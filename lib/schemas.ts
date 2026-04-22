@@ -21,6 +21,19 @@ export const contestDecisionSchema = z.object({
   ]),
 });
 
+export const overrideDecisionSchema = z.object({
+  receiptId: z.string().uuid("Receipt ID must be a valid UUID."),
+  reviewerName: z
+    .string()
+    .min(1, "Reviewer name must be at least 1 character.")
+    .max(80, "Reviewer name must be at most 80 characters."),
+  overrideDecision: z.enum(["approve", "reject", "annotate"]),
+  annotation: z
+    .string()
+    .min(1, "Annotation must be at least 1 character.")
+    .max(500, "Annotation must be at most 500 characters."),
+});
+
 export const auditRuleSchema = z.object({
   rule: z.enum([
     "SAFETY",
@@ -111,6 +124,7 @@ export const caseFileReceiptSchema = auditClassificationSchema.extend({
 
 export type ClassifyScenarioInput = z.infer<typeof classifyScenarioSchema>;
 export type ContestDecisionInput = z.infer<typeof contestDecisionSchema>;
+export type OverrideDecisionInput = z.infer<typeof overrideDecisionSchema>;
 export type AuditClassification = z.infer<typeof auditClassificationSchema>;
 export type HistoryEvent = z.infer<typeof historyEventSchema>;
 export type CaseFileReceipt = z.infer<typeof caseFileReceiptSchema>;

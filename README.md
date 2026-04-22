@@ -1,6 +1,6 @@
-# Decision Receipt Lab
+# Ovrule
 
-Decision Receipt Lab is a Next.js 14 App Router project for prototyping decision classification and contest flows. The app provides a landing page at `/`, a decision classification API at `/api/classify`, and a contest receipt API at `/api/contest`.
+Ovrule is a Next.js 14 App Router project for auditing AI agent actions as structured case files. It classifies proposed actions, produces a signed receipt with rule trace and evidence gaps, logs contests, and supports reviewer overrides through a case-management UI.
 
 ## Stack
 
@@ -16,7 +16,7 @@ Decision Receipt Lab is a Next.js 14 App Router project for prototyping decision
 ## Project Structure
 
 ```text
-decision-receipt-lab/
+ovrule/
 ├── app/
 │   ├── api/
 │   │   ├── classify/route.ts
@@ -83,6 +83,12 @@ decision-receipt-lab/
 - Validates input with Zod.
 - Generates a SHA-256 receipt ID from the submission payload.
 - Attempts to write to a `decision_contests` Supabase table when Supabase credentials are configured.
+
+`POST /api/override`
+
+- Validates reviewer override input with Zod.
+- Writes reviewer actions to `receipt_overrides`.
+- Appends a new event to `receipt_history` for the case timeline.
 
 Suggested table schema:
 
