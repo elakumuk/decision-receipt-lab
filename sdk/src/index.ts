@@ -103,6 +103,7 @@ export type OvruleClientOptions = {
 };
 
 const DEFAULT_OVRULE_BASE_URL = "https://decision-receipt-lab.vercel.app";
+const SDK_VERSION = "0.2.1";
 
 let hasShownReadyMessage = false;
 
@@ -144,7 +145,7 @@ function logSuccessfulAudit(receipt: CaseFileReceipt, baseUrl: string) {
   const caseUrl = `${getConsoleBaseUrl(baseUrl)}/case/${receipt.receiptId}`;
 
   if (!hasShownReadyMessage) {
-    console.info(`[ovrule-lab v0.2.0] ready · docs: ${DEFAULT_OVRULE_BASE_URL}/docs`);
+    console.info(`[ovrule-lab v${SDK_VERSION}] ready · docs: ${DEFAULT_OVRULE_BASE_URL}/docs`);
     hasShownReadyMessage = true;
   }
 
@@ -173,6 +174,45 @@ async function readJson<T>(response: Response): Promise<T> {
   }
 
   return data;
+}
+
+function parseSseBlock(block: string) {
+  const lines = block.split("\n");
+  const eventName = lines.find((line) => line.startsWith("event:"))?.slice(6).trim();
+  const data = lines
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trim())
+    .join("\n");
+
+  if (!eventName || !data) {
+    return null;
+  }
+
+  return {
+    eventName,
+    data: JSON.parse(data) as
+      | { type: "analysis.completed"; receipt: CaseFileReceipt }
+      | { type: "session.error"; message: string },
+  };
+}
+
+function applySseEvent(
+  parsed: ReturnType<typeof parseSseBlock>,
+  currentReceipt: CaseFileReceipt | null,
+) {
+  if (!parsed) {
+    return currentReceipt;
+  }
+
+  if (parsed.data.type === "session.error") {
+    throw new Error(parsed.data.message);
+  }
+
+  if (parsed.data.type === "analysis.completed") {
+    return parsed.data.receipt;
+  }
+
+  return currentReceipt;
 }
 
 export class OvruleClient {
@@ -225,38 +265,25 @@ export class OvruleClient {
     while (true) {
       const { done, value } = await reader.read();
 
-      if (done) {
-        break;
+      if (value) {
+        buffer += decoder.decode(value, { stream: !done });
       }
-
-      buffer += decoder.decode(value, { stream: true });
       const blocks = buffer.split("\n\n");
       buffer = blocks.pop() ?? "";
 
       for (const block of blocks) {
-        const lines = block.split("\n");
-        const eventName = lines.find((line) => line.startsWith("event:"))?.slice(6).trim();
-        const data = lines
-          .filter((line) => line.startsWith("data:"))
-          .map((line) => line.slice(5).trim())
-          .join("\n");
-
-        if (!eventName || !data) {
-          continue;
-        }
-
-        const parsed = JSON.parse(data) as
-          | { type: "analysis.completed"; receipt: CaseFileReceipt }
-          | { type: "session.error"; message: string };
-
-        if (parsed.type === "analysis.completed") {
-          finalReceipt = parsed.receipt;
-        }
-
-        if (parsed.type === "session.error") {
-          throw new Error(parsed.message);
-        }
+        finalReceipt = applySseEvent(parseSseBlock(block), finalReceipt);
       }
+
+      if (done) {
+        break;
+      }
+    }
+
+    buffer += decoder.decode();
+
+    if (buffer.trim()) {
+      finalReceipt = applySseEvent(parseSseBlock(buffer.trim()), finalReceipt);
     }
 
     if (!finalReceipt) {
