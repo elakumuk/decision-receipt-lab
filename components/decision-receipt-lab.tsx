@@ -558,6 +558,54 @@ export function DecisionReceiptLab({
     });
 
     try {
+      let finalEventReceived = false;
+      let fallbackTimer: number | null = null;
+      let latestReceiptId: string | undefined;
+
+      const clearFallbackTimer = () => {
+        if (fallbackTimer) {
+          window.clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
+      };
+
+      const scheduleFinalFallback = () => {
+        clearFallbackTimer();
+        fallbackTimer = window.setTimeout(async () => {
+          if (finalEventReceived) {
+            return;
+          }
+
+          if (!latestReceiptId) {
+            setStreamState(null);
+            setError("The audit finished rule checks but never delivered the final case file.");
+            return;
+          }
+
+          try {
+            const fallbackResponse = await fetch(`/api/receipts/${latestReceiptId}`);
+
+            if (!fallbackResponse.ok) {
+              throw new Error("Receipt fetch failed after stream completion timeout.");
+            }
+
+            const fallbackReceipt = (await fallbackResponse.json()) as CaseFileReceipt;
+            console.info("[classify-client] fallback receipt fetch succeeded", {
+              receiptId: fallbackReceipt.receiptId,
+            });
+            setReceipt(fallbackReceipt);
+            setScenario(fallbackReceipt.scenario);
+            setStreamState(null);
+          } catch (fallbackError) {
+            console.error("[classify-client] fallback receipt fetch failed", fallbackError);
+            setStreamState(null);
+            setError(
+              "The audit completed rule evaluation, but the final case file did not arrive. Please retry.",
+            );
+          }
+        }, 10_000);
+      };
+
       const response = await fetch("/api/classify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -603,6 +651,7 @@ export function DecisionReceiptLab({
           const payload = JSON.parse(parsedBlock.data) as StreamEventPayload;
 
           if (payload.type === "session.started") {
+            latestReceiptId = payload.receiptId;
             setStreamState((current) => ({
               receiptId: payload.receiptId,
               startedAt: payload.startedAt,
@@ -643,10 +692,19 @@ export function DecisionReceiptLab({
                   }
                 : current,
             );
+            if (payload.index === RULE_SEQUENCE.length - 1) {
+              scheduleFinalFallback();
+            }
             continue;
           }
 
           if (payload.type === "analysis.completed") {
+            finalEventReceived = true;
+            clearFallbackTimer();
+            console.info("[classify-client] received analysis.completed", {
+              receiptId: payload.receipt.receiptId,
+              decision: payload.receipt.decision,
+            });
             setReceipt(payload.receipt);
             setScenario(payload.receipt.scenario);
             if (

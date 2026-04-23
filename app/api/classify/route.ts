@@ -31,13 +31,20 @@ export async function POST(request: Request) {
     const stream = new ReadableStream({
       async start(controller) {
         const sendEvent = (eventName: string, payloadToSend: unknown) => {
-          controller.enqueue(encoder.encode(`event: ${eventName}\n`));
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payloadToSend)}\n\n`));
+          controller.enqueue(
+            encoder.encode(`event: ${eventName}\ndata: ${JSON.stringify(payloadToSend)}\n\n`),
+          );
         };
 
         try {
           for await (const event of classifyScenarioStream(scenario, { revision, policyPack })) {
             const parsedEvent = classifyStreamEventSchema.parse(event);
+            if (parsedEvent.type === "analysis.completed") {
+              console.info("[classify] emitting analysis.completed", {
+                receiptId: parsedEvent.receipt.receiptId,
+                decision: parsedEvent.receipt.decision,
+              });
+            }
             sendEvent(parsedEvent.type, parsedEvent);
           }
         } catch (error) {

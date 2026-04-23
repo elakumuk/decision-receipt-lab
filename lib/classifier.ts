@@ -498,7 +498,6 @@ async function persistReceipt(
         summary: parsed.summary,
         rule_trace: parsed.ruleTrace,
         hash: fullHash,
-        signature: receipt.signature,
         created_at: receipt.timestamp,
       });
 
@@ -1043,6 +1042,12 @@ async function buildFinalReceipt(
     revisionHistory,
   );
   receipt.signature = signReceipt(receipt);
+  console.info("[classify] final receipt built", {
+    receiptId: receipt.receiptId,
+    decision: receipt.decision,
+    policyPack,
+    hasSignature: Boolean(receipt.signature),
+  });
   await persistReceipt(receipt, parsed, revision);
   return receipt;
 }
