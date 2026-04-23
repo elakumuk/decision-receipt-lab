@@ -490,7 +490,28 @@ async function persistReceipt(
   });
 
   if (error) {
-    if (error.code === "PGRST204") {
+    const missingLegacyColumn =
+      error.code === "PGRST204" ||
+      error.code === "42703" ||
+      error.message.includes("policy_pack") ||
+      error.message.includes("signature") ||
+      error.message.includes("claimed_goal") ||
+      error.message.includes("affected_parties") ||
+      error.message.includes("authority_basis") ||
+      error.message.includes("evidence_used") ||
+      error.message.includes("evidence_missing") ||
+      error.message.includes("risk_score") ||
+      error.message.includes("reasoning_for") ||
+      error.message.includes("reasoning_against") ||
+      error.message.includes("missing_information") ||
+      error.message.includes("status");
+
+    if (missingLegacyColumn) {
+      console.warn("[classify] falling back to legacy receipt insert", {
+        receiptId: receipt.receiptId,
+        code: error.code,
+        message: error.message,
+      });
       const { error: legacyError } = await supabase.from("receipts").insert({
         id: receipt.receiptId,
         scenario: receipt.scenario,
