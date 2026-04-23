@@ -1,6 +1,6 @@
 {
   "name": "ovrule-lab",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "TypeScript SDK for Ovrule case-file classification, guardrails, and receipt verification.",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,8 +14,12 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "bin/welcome.js"
   ],
+  "bin": {
+    "ovrule-lab": "./bin/welcome.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf dist",

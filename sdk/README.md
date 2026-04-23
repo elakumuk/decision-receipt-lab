@@ -8,7 +8,7 @@ TypeScript client for Ovrule case-file classification, guardrails, and receipt v
 npm install ovrule-lab
 ```
 
-On the first successful `classify()` or `guard()` call in a process, the SDK prints a one-line ready message plus a permalink to the created case. Later successful audits print only the case permalink. Set `OVRULE_QUIET=1` to suppress those logs.
+On the first successful `classify()` or `guard()` call in a process, the SDK prints the full Ovrule ASCII banner plus a permalink to the created case. Later successful audits print only the case permalink. Set `OVRULE_QUIET=1` to suppress all SDK logs. You can also run `npx ovrule-lab` at any time to print the banner manually.
 
 ## 1. Simple classify
 

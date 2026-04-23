@@ -1,3 +1,5 @@
+import { getDefaultBaseUrl, isQuietModeEnabled, logBanner, SDK_VERSION } from "./banner.js";
+
 export type Decision = "ADMISSIBLE" | "AMBIGUOUS" | "REFUSED";
 export type Verdict = "PASS" | "WARN" | "FAIL";
 export type PolicyPackId = "general" | "customer_support" | "healthcare" | "finance";
@@ -102,9 +104,6 @@ export type OvruleClientOptions = {
   fetch?: typeof globalThis.fetch;
 };
 
-const DEFAULT_OVRULE_BASE_URL = "https://decision-receipt-lab.vercel.app";
-const SDK_VERSION = "0.2.1";
-
 let hasShownReadyMessage = false;
 
 type VerifyResponse = {
@@ -116,15 +115,6 @@ type RequestOptions = {
   policyPack?: PolicyPackId;
 };
 
-function isQuietModeEnabled() {
-  return (
-    typeof process !== "undefined" &&
-    typeof process.env === "object" &&
-    typeof process.env.OVRULE_QUIET !== "undefined" &&
-    process.env.OVRULE_QUIET !== ""
-  );
-}
-
 function getConsoleBaseUrl(baseUrl: string) {
   if (baseUrl) {
     return baseUrl;
@@ -134,7 +124,7 @@ function getConsoleBaseUrl(baseUrl: string) {
     return window.location.origin;
   }
 
-  return DEFAULT_OVRULE_BASE_URL;
+  return getDefaultBaseUrl();
 }
 
 function logSuccessfulAudit(receipt: CaseFileReceipt, baseUrl: string) {
@@ -145,7 +135,7 @@ function logSuccessfulAudit(receipt: CaseFileReceipt, baseUrl: string) {
   const caseUrl = `${getConsoleBaseUrl(baseUrl)}/case/${receipt.receiptId}`;
 
   if (!hasShownReadyMessage) {
-    console.info(`[ovrule-lab v${SDK_VERSION}] ready · docs: ${DEFAULT_OVRULE_BASE_URL}/docs`);
+    logBanner();
     hasShownReadyMessage = true;
   }
 
@@ -220,7 +210,7 @@ export class OvruleClient {
   private readonly fetchImpl: typeof globalThis.fetch;
 
   constructor(options: OvruleClientOptions = {}) {
-    this.baseUrl = options.baseUrl?.replace(/\/$/, "") ?? DEFAULT_OVRULE_BASE_URL;
+    this.baseUrl = options.baseUrl?.replace(/\/$/, "") ?? getDefaultBaseUrl();
     this.fetchImpl = options.fetch ?? globalThis.fetch;
 
     if (!this.fetchImpl) {
