@@ -102,6 +102,10 @@ export type OvruleClientOptions = {
   fetch?: typeof globalThis.fetch;
 };
 
+const DEFAULT_OVRULE_BASE_URL = "https://decision-receipt-lab.vercel.app";
+
+let hasShownReadyMessage = false;
+
 type VerifyResponse = {
   valid: boolean;
 };
@@ -110,6 +114,42 @@ type RequestOptions = {
   signal?: AbortSignal;
   policyPack?: PolicyPackId;
 };
+
+function isQuietModeEnabled() {
+  return (
+    typeof process !== "undefined" &&
+    typeof process.env === "object" &&
+    typeof process.env.OVRULE_QUIET !== "undefined" &&
+    process.env.OVRULE_QUIET !== ""
+  );
+}
+
+function getConsoleBaseUrl(baseUrl: string) {
+  if (baseUrl) {
+    return baseUrl;
+  }
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  return DEFAULT_OVRULE_BASE_URL;
+}
+
+function logSuccessfulAudit(receipt: CaseFileReceipt, baseUrl: string) {
+  if (isQuietModeEnabled()) {
+    return;
+  }
+
+  const caseUrl = `${getConsoleBaseUrl(baseUrl)}/case/${receipt.receiptId}`;
+
+  if (!hasShownReadyMessage) {
+    console.info(`[ovrule-lab v0.2.0] ready · docs: ${DEFAULT_OVRULE_BASE_URL}/docs`);
+    hasShownReadyMessage = true;
+  }
+
+  console.info(`[ovrule-lab] ✓ audited via ${caseUrl}`);
+}
 
 function normalizeAction(action: string | ProposedAction, options?: RequestOptions): ProposedAction {
   if (typeof action === "string") {
@@ -140,7 +180,7 @@ export class OvruleClient {
   private readonly fetchImpl: typeof globalThis.fetch;
 
   constructor(options: OvruleClientOptions = {}) {
-    this.baseUrl = options.baseUrl?.replace(/\/$/, "") ?? "";
+    this.baseUrl = options.baseUrl?.replace(/\/$/, "") ?? DEFAULT_OVRULE_BASE_URL;
     this.fetchImpl = options.fetch ?? globalThis.fetch;
 
     if (!this.fetchImpl) {
@@ -222,6 +262,8 @@ export class OvruleClient {
     if (!finalReceipt) {
       throw new Error("Ovrule classify stream finished without a final receipt.");
     }
+
+    logSuccessfulAudit(finalReceipt, this.baseUrl);
 
     return finalReceipt;
   }

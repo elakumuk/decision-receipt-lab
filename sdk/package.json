@@ -1,6 +1,6 @@
 {
-  "name": "ovrule",
-  "version": "0.1.0",
+  "name": "ovrule-lab",
+  "version": "0.2.0",
   "description": "TypeScript SDK for Ovrule case-file classification, guardrails, and receipt verification.",
   "type": "module",
   "main": "./dist/index.js",
