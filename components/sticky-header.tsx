@@ -21,7 +21,7 @@ export function StickyHeader() {
       <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-4">
           <Link href="/" className="text-[18px] font-semibold tracking-[-0.03em] text-neutral-50">
-            <OvruleWordmark className="h-7 w-auto text-neutral-50" />
+            <OvruleWordmark className="h-8 w-auto text-neutral-50 sm:h-[2.15rem]" />
           </Link>
 
           <nav className="hidden items-center gap-5 text-sm text-neutral-400 md:flex">
