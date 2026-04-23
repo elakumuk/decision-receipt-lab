@@ -25,6 +25,7 @@ import {
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { CaseFileReceipt, FixSuggestion, HistoryEvent, RevisionMetadata, RuleName } from "@/lib/schemas";
+import { inputScenarioChips } from "@/lib/site-content";
 
 type LegacyReceipt = {
   decision: "ADMISSIBLE" | "AMBIGUOUS" | "REFUSED";
@@ -106,23 +107,7 @@ const RULE_SEQUENCE: RuleName[] = [
   "CONSENT",
 ];
 
-const exampleScenarios = [
-  {
-    label: "Bulk deletion",
-    value:
-      "An operations agent wants to delete inactive user accounts in bulk after guessing which accounts are abandoned, without sending a warning first.",
-  },
-  {
-    label: "Price change",
-    value:
-      "A pricing agent wants to increase plan prices for all active customers overnight because conversion stayed strong last week.",
-  },
-  {
-    label: "Send mass email",
-    value:
-      "A marketing agent wants to send a promotional email to all customers in California using last quarter's list, including users whose consent status is unclear.",
-  },
-] as const;
+const exampleScenarios = inputScenarioChips;
 
 const contestCategories = [
   "incorrect_classification",
@@ -345,12 +330,12 @@ function InputComposer({
   return (
     <div className="mx-auto w-full max-w-3xl rounded-[36px] border border-white/8 bg-white/[0.03] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-8">
       <div className="text-center">
-        <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Start a case</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Show the action you want reviewed</p>
         <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-neutral-50 sm:text-[2.4rem]">
-          What is the agent about to do?
+          What is the agent about to do, exactly?
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-neutral-400 sm:text-base">
-          Describe the proposed action, the claimed goal, and any permission or policy basis you already know.
+          Write the action the agent wants to take and anything it thinks gives it permission.
         </p>
       </div>
 
@@ -382,7 +367,7 @@ function InputComposer({
         className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-[24px] border border-white/10 bg-neutral-100 px-4 py-4 text-sm font-medium text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
-        {isSubmitting ? "Classifying…" : "Request case file"}
+        {isSubmitting ? "Classifying…" : "Open the case file"}
       </button>
     </div>
   );
@@ -838,7 +823,7 @@ export function DecisionReceiptLab({
               isSubmitting={isSubmitting}
             />
             <div className="mx-auto mt-5 max-w-2xl text-center text-sm leading-7 text-neutral-500">
-              No case yet. Describe an agent action to start one.
+              No case yet. Describe an agent action and Ovrule will open the file.
             </div>
           </motion.div>
         ) : (
@@ -852,7 +837,7 @@ export function DecisionReceiptLab({
               >
                 <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Case intake</p>
                 <h3 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-neutral-50">
-                  What is the agent about to do?
+                  What is the agent about to do, exactly?
                 </h3>
                 <p className="mt-3 text-sm leading-7 text-neutral-400">
                   Rewrite the scenario or run a second case without leaving the current file.
@@ -886,7 +871,7 @@ export function DecisionReceiptLab({
                   className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-[22px] border border-white/10 bg-neutral-100 px-4 py-3.5 text-sm font-medium text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
-                  {isSubmitting ? "Classifying…" : "Run this case"}
+                  {isSubmitting ? "Classifying…" : "Re-audit this version"}
                 </button>
 
                 {caseFile ? (
@@ -945,7 +930,7 @@ export function DecisionReceiptLab({
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div className="max-w-3xl">
                             <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">
-                              Case verdict
+                              What Ovrule concluded
                             </p>
                             <div className={`mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold tracking-[0.18em] ${tone?.badge}`}>
                               {decisionIcon(caseFile.decision)}
@@ -1131,7 +1116,7 @@ export function DecisionReceiptLab({
                     transition={{ duration: 0.34, delay: 0.14, ease: [0.16, 1, 0.3, 1] }}
                     className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
                   >
-                    <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Evidence and gaps</p>
+                    <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">What the model used, and what it still needs</p>
                     {!caseFile ? (
                       <div className="mt-4">
                         <StatusCard
@@ -1219,7 +1204,7 @@ export function DecisionReceiptLab({
                     transition={{ duration: 0.34, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
                     className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
                   >
-                    <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Receipt and timeline</p>
+                    <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">What got recorded</p>
                     {!caseFile ? (
                       <div className="mt-4">
                         <StatusCard
@@ -1262,7 +1247,7 @@ export function DecisionReceiptLab({
                             className="inline-flex items-center justify-center gap-2 rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-neutral-200 transition hover:border-white/18 hover:bg-white/[0.05]"
                           >
                             <GitBranch className="h-4 w-4" />
-                            Contest this decision
+                            Disagree? File a contest
                           </button>
                           <button
                             type="button"
@@ -1270,7 +1255,7 @@ export function DecisionReceiptLab({
                             className="inline-flex items-center justify-center gap-2 rounded-[18px] border border-cyan-400/20 bg-cyan-400/[0.08] px-4 py-3 text-sm text-cyan-100 transition hover:border-cyan-400/35 hover:bg-cyan-400/[0.12]"
                           >
                             <UserRoundCheck className="h-4 w-4" />
-                            Reviewer override
+                            Human review override
                           </button>
                           <button
                             type="button"
@@ -1294,7 +1279,7 @@ export function DecisionReceiptLab({
                             download={`ovrule-case-file-${caseFile.hash}.json`}
                             className="inline-flex items-center gap-1.5 px-1 py-3 text-sm text-neutral-400 transition hover:text-neutral-200"
                           >
-                            Download as JSON
+                            Download the full case file
                             <ArrowRight className="h-3.5 w-3.5" />
                           </a>
                         </div>
@@ -1328,7 +1313,7 @@ export function DecisionReceiptLab({
                                 </div>
                               ))
                             ) : (
-                              <p className="text-sm text-neutral-500">No history entries yet.</p>
+                              <p className="text-sm text-neutral-500">No follow-up actions yet. This case has not been challenged or revised.</p>
                             )}
                           </div>
                         </div>
@@ -1429,7 +1414,7 @@ export function DecisionReceiptLab({
                   disabled={isContesting || contestReason.trim().length < 1 || contestReason.length > 500}
                   className="rounded-[18px] bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isContesting ? "Submitting…" : "Submit contest"}
+                  {isContesting ? "Submitting…" : "File the contest"}
                 </button>
               </div>
             </motion.div>
@@ -1454,9 +1439,9 @@ export function DecisionReceiptLab({
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.24em] text-neutral-500">Reviewer override</p>
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-neutral-500">Human review override</p>
                   <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em] text-neutral-100">
-                    Record a human decision
+                    Add a reviewer decision
                   </h2>
                 </div>
                 <button

@@ -4,6 +4,7 @@ import { DecisionReceiptLab } from "@/components/decision-receipt-lab";
 import { HeroSection } from "@/components/hero-section";
 import { HowItWorks } from "@/components/how-it-works";
 import { OvruleWordmark } from "@/components/ovrule-wordmark";
+import { ScenarioShowcase } from "@/components/scenario-showcase";
 import { StickyHeader } from "@/components/sticky-header";
 import { TrustBand } from "@/components/trust-band";
 import { demoRefusedReceipt, demoRefusedScenario } from "@/lib/demo-data";
@@ -31,16 +32,17 @@ export default function Home({ searchParams }: HomeProps) {
       </section>
 
       <HowItWorks />
+      <ScenarioShowcase />
 
       <section id="live-demo" className="py-20 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
             <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Live tool</p>
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.05em] text-neutral-50 sm:text-4xl">
-              Start with one action. Expand into a full case file.
+              Bring your own scenario. Ovrule opens the file.
             </h2>
             <p className="mt-4 text-sm leading-7 text-neutral-400 sm:text-base">
-              Submit a scenario and Ovrule reveals the case in sequence: verdict first, then evidence, then receipt and history.
+              Submit an agent action and the case unfolds in order: verdict first, then evidence, then the receipt and revision trail.
             </p>
           </div>
 

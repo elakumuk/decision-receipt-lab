@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, FileCheck2, Scale, Stamp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { demoRefusedReceipt } from "@/lib/demo-data";
+import { heroCopy } from "@/lib/site-content";
 
 function PreviewCaseCard() {
   return (
@@ -14,7 +15,7 @@ function PreviewCaseCard() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Case file preview</p>
-            <p className="mt-2 text-lg font-medium text-neutral-50">Vendor payment escalation</p>
+            <p className="mt-2 text-lg font-medium text-neutral-50">Refund escalation</p>
           </div>
           <div className="rounded-full border border-red-400/30 bg-red-400/10 px-4 py-2 font-mono text-xs uppercase tracking-[0.26em] text-red-300">
             Refused
@@ -24,10 +25,10 @@ function PreviewCaseCard() {
         <div className="mt-5 rounded-[26px] border border-red-400/18 bg-red-400/[0.05] p-4">
           <div className="flex items-center gap-2 text-sm font-medium text-neutral-100">
             <Scale className="h-4 w-4 text-red-300" />
-            Missing verification and authorization
+            Missing approval and authority
           </div>
           <p className="mt-3 text-sm leading-7 text-neutral-300">
-            Unverified banking changes and missing approval keep this payment out of policy.
+            A support agent cannot clear a $5,000 refund when the policy requires manager approval above $500.
           </p>
         </div>
 
@@ -40,9 +41,9 @@ function PreviewCaseCard() {
           <div className="rounded-[22px] border border-white/8 bg-black/20 p-4">
             <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-neutral-500">Rules tripped</p>
             <div className="mt-3 space-y-2 text-sm text-neutral-300">
-              <p>Safety</p>
               <p>Authorization</p>
-              <p>Causal validity</p>
+              <p>Impact scope</p>
+              <p>Safety</p>
             </div>
           </div>
         </div>
@@ -71,10 +72,10 @@ export function HeroSection() {
           >
             <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Agent accountability layer</p>
             <h1 className="mt-5 text-4xl font-semibold tracking-[-0.06em] text-neutral-50 sm:text-5xl lg:text-6xl">
-              Every agent action deserves a case file.
+              {heroCopy.headline}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-neutral-400 sm:text-lg">
-              Ovrule audits proposed agent actions, issues a structured verdict, and turns the result into a verifiable receipt with evidence gaps, challenge history, and human override trails.
+              {heroCopy.subhead}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -122,7 +123,7 @@ export function HeroSection() {
                   REFUSED
                 </span>
                 <p className="text-sm text-neutral-300">
-                  Transfer $18,000 to a new vendor after banking details changed on an urgent invoice.
+                  A support agent wants to refund $5,000 after an escalation, even though policy requires manager approval above $500.
                 </p>
               </div>
             </div>

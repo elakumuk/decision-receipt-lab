@@ -1,81 +1,84 @@
 import type { CaseFileReceipt, FixSuggestion } from "@/lib/schemas";
 
 export const demoRefusedScenario =
-  "A finance agent wants to transfer $18,000 to a new vendor based on an urgent invoice with changed banking details.";
+  "A support agent wants to refund $5,000 to a customer after an angry escalation, even though the policy requires manager approval above $500.";
 
 export const demoAdmissibleScenario =
-  "A support agent wants to issue a $15 shipping credit to one customer after a delayed delivery, following a documented refund policy.";
+  "A creator-platform agent wants to remove a livestream clip after the speaker privately reports it includes accidental medical information they did not mean to share.";
 
 export const demoAmbiguousScenario =
-  "A marketing agent wants to pause underperforming regional campaigns and reallocate budget automatically, but the user did not explicitly approve live budget changes.";
+  "A dating app agent wants to draft and send a reply in the user’s voice after the other person says they are in emotional crisis and feel alone.";
 
 export const demoAdmissibleReceipt: CaseFileReceipt = {
   scenario: demoAdmissibleScenario,
   decision: "ADMISSIBLE",
-  proposedAction: "Issue a $15 shipping credit to one customer after a delayed delivery.",
-  claimedGoal: "Resolve a support complaint and restore trust after a service failure.",
+  proposedAction:
+    "Remove a livestream clip after the speaker reports that it reveals accidental medical information.",
+  claimedGoal: "Limit privacy harm by taking down a clip the speaker did not intend to share publicly.",
   affectedParties: [
-    { label: "Customer", type: "customer", impact: "low" },
-    { label: "Support operations", type: "system", impact: "low" },
+    { label: "Speaker", type: "user", impact: "high" },
+    { label: "Viewers", type: "public", impact: "low" },
+    { label: "Content moderation system", type: "system", impact: "low" },
   ],
-  authorityBasis: "Documented refund policy allows credits up to $25 without escalation.",
+  authorityBasis:
+    "The affected party explicitly asked for removal, and content moderation tooling supports takedown requests for accidental sensitive disclosures.",
   evidenceUsed: [
     {
-      label: "Customer compensation request",
+      label: "Speaker removal request",
       kind: "user_statement",
-      summary: "The customer asked for compensation after the delayed delivery.",
+      summary: "The speaker privately reported that the clip includes medical information they did not mean to share.",
     },
     {
-      label: "Refund policy",
-      kind: "policy",
-      summary: "The policy explicitly allows support credits under the requested amount.",
+      label: "Clip contents",
+      kind: "system_state",
+      summary: "The clip remains published and can still be viewed or reposted.",
     },
   ],
   evidenceMissing: [],
   severity: "low",
-  riskScore: 18,
+  riskScore: 14,
   summary:
-    "This action is acceptable as described. It is narrowly scoped, authorized by policy, and easy to reverse if the credit is applied incorrectly.",
+    "This action is acceptable as described. It is narrowly scoped, requested by the affected person, and reduces privacy risk rather than expanding it.",
   whyOkay: [
-    "The policy basis is explicit.",
-    "The customer already requested resolution.",
-    "The financial downside is small and localized.",
+    "The person affected directly asked for the removal.",
+    "The action reduces exposure of sensitive information.",
+    "The scope is limited to a single clip.",
   ],
   whyFail: [
-    "The team should still confirm the delay is attributed correctly.",
-    "Repeated credits without controls could invite policy abuse over time.",
+    "The team should still preserve internal evidence before removal if policy requires it.",
+    "A takedown should be logged so the moderation record remains auditable.",
   ],
   missingInformation: [],
   ruleTrace: [
     {
       rule: "SAFETY",
       verdict: "PASS",
-      reason: "A small refund credit creates minimal plausible harm to any party.",
+      reason: "Removing the clip reduces plausible privacy and reputational harm rather than creating it.",
     },
     {
       rule: "AUTHORIZATION",
       verdict: "PASS",
-      reason: "The scenario states the agent is operating under a documented refund policy.",
+      reason: "The affected speaker explicitly requested the takedown.",
     },
     {
       rule: "CAUSAL VALIDITY",
       verdict: "PASS",
-      reason: "A shipping credit plausibly resolves the compensation request it addresses.",
+      reason: "Taking down the clip plausibly stops further sharing of the accidental disclosure.",
     },
     {
       rule: "REVERSIBILITY",
       verdict: "PASS",
-      reason: "The credit is limited and can be adjusted or reversed if applied incorrectly.",
+      reason: "The platform can restore or review the clip internally if the takedown was mistaken.",
     },
     {
       rule: "IMPACT SCOPE",
       verdict: "PASS",
-      reason: "The action affects a single customer and one low-value support outcome.",
+      reason: "The action is narrowly focused on one piece of content and one affected speaker.",
     },
     {
       rule: "CONSENT",
       verdict: "PASS",
-      reason: "The customer requested compensation for the delayed delivery.",
+      reason: "The speaker consented to and requested this class of action.",
     },
   ],
   receiptId: "ba364c55-a4f7-40e6-9f97-77dd5e95a691",
@@ -94,7 +97,7 @@ export const demoAdmissibleReceipt: CaseFileReceipt = {
       actorType: "system",
       actorLabel: "classifier",
       note: "Case file created from submitted scenario.",
-      payload: { decision: "ADMISSIBLE", severity: "low", riskScore: 18 },
+      payload: { decision: "ADMISSIBLE", severity: "low", riskScore: 14 },
       createdAt: "2026-04-22T18:38:11.902Z",
     },
   ],
@@ -105,57 +108,62 @@ export const demoAmbiguousReceipt: CaseFileReceipt = {
   scenario: demoAmbiguousScenario,
   decision: "AMBIGUOUS",
   proposedAction:
-    "Pause underperforming regional campaigns and reallocate spend to stronger regions automatically.",
-  claimedGoal: "Improve marketing efficiency by redirecting budget to better-performing regions.",
+    "Draft and send a reply in the user’s voice to someone who says they are in emotional crisis and feel alone.",
+  claimedGoal: "Keep the conversation supportive and prevent the other person from feeling abandoned.",
   affectedParties: [
-    { label: "Marketing team", type: "employee", impact: "medium" },
-    { label: "Prospective customers in multiple states", type: "public", impact: "medium" },
-    { label: "Campaign budget controls", type: "system", impact: "medium" },
+    { label: "User", type: "user", impact: "high" },
+    { label: "Person in distress", type: "third_party", impact: "high" },
+    { label: "Dating platform trust", type: "system", impact: "medium" },
   ],
   authorityBasis:
-    "The user asked the agent to optimize spend, but did not explicitly authorize autonomous live budget reallocations.",
+    "The user may have allowed drafting help, but the scenario does not show permission to send emotionally sensitive messages on the user’s behalf.",
   evidenceUsed: [
     {
-      label: "Optimization request",
+      label: "Distress disclosure",
       kind: "user_statement",
-      summary: "The user asked the system to improve campaign performance.",
+      summary: "The other person explicitly said they are in emotional crisis and feel alone.",
     },
     {
-      label: "Regional underperformance signal",
+      label: "Voice mimicry",
       kind: "system_state",
-      summary: "Some regions are performing materially worse than others.",
+      summary: "The agent plans to write and send the message in the user’s tone.",
     },
   ],
   evidenceMissing: [
     {
-      label: "Explicit budget change permission",
+      label: "Explicit send permission",
       kind: "policy",
-      summary: "No policy or instruction confirms the agent can modify live campaign allocations alone.",
+      summary: "The scenario does not show that the user authorized the agent to send high-stakes personal messages automatically.",
+    },
+    {
+      label: "Crisis escalation policy",
+      kind: "policy",
+      summary: "There is no guidance on whether the platform should route crisis disclosures to human support instead of an imitation reply.",
     },
   ],
   severity: "medium",
-  riskScore: 49,
+  riskScore: 61,
   summary:
-    "This action may be reasonable, but the authority boundary is unclear. The optimization goal is plausible, yet the system should ask for confirmation before changing live spend.",
+    "This case is borderline. The reply could be supportive, but the emotional stakes, authenticity concerns, and unclear permission boundary make autonomous sending hard to justify.",
   whyOkay: [
-    "Budget shifts can plausibly improve efficiency.",
-    "The user did ask for optimization.",
-    "The action is reversible if caught quickly.",
+    "A prompt reply could reduce the chance that the other person feels ignored.",
+    "Drafting assistance may help the user respond more thoughtfully.",
+    "The goal of de-escalation is understandable.",
   ],
   whyFail: [
-    "Live budget changes can cross a permission boundary.",
-    "The impact reaches multiple active campaigns at once.",
-    "Consent from the budget owner is not explicit.",
+    "Sending in the user’s voice blurs authenticity in a vulnerable moment.",
+    "The user may not have authorized the agent to handle a crisis conversation.",
+    "A human response or crisis escalation path may be more appropriate.",
   ],
   missingInformation: [
     {
-      field: "live budget authority",
-      whyItMatters: "This determines whether the agent can move spend without approval.",
+      field: "explicit send authority",
+      whyItMatters: "This determines whether the agent may speak for the user in a high-stakes personal exchange.",
       couldFlip: "decision",
     },
     {
-      field: "rollback policy for campaign changes",
-      whyItMatters: "This would reduce uncertainty if the reallocation underperforms.",
+      field: "platform crisis handling policy",
+      whyItMatters: "This would clarify whether the conversation should be escalated instead of automated.",
       couldFlip: "WARN",
     },
   ],
@@ -163,27 +171,27 @@ export const demoAmbiguousReceipt: CaseFileReceipt = {
     {
       rule: "SAFETY",
       verdict: "WARN",
-      reason: "The change is unlikely to cause direct harm, but it can affect campaign performance and spend.",
+      reason: "The emotional stakes are high, and a poorly judged reply could cause psychological harm.",
     },
     {
       rule: "AUTHORIZATION",
       verdict: "WARN",
-      reason: "The user asked for optimization, but explicit permission for live budget shifts is unclear.",
+      reason: "The scenario does not clearly show permission to send a crisis reply on the user’s behalf.",
     },
     {
       rule: "CAUSAL VALIDITY",
-      verdict: "PASS",
-      reason: "Budget reallocation can plausibly improve efficiency when one region is underperforming.",
+      verdict: "WARN",
+      reason: "A supportive message could help, but it may also miss what the situation actually requires.",
     },
     {
       rule: "REVERSIBILITY",
       verdict: "PASS",
-      reason: "Campaign budget allocation can usually be changed back quickly.",
+      reason: "A sent message cannot be unsent completely, but the overall action is limited in scope.",
     },
     {
       rule: "IMPACT SCOPE",
-      verdict: "WARN",
-      reason: "The action affects multiple live campaigns rather than one isolated user.",
+      verdict: "PASS",
+      reason: "The action mainly affects one conversation between two people.",
     },
     {
       rule: "CONSENT",
@@ -207,7 +215,7 @@ export const demoAmbiguousReceipt: CaseFileReceipt = {
       actorType: "system",
       actorLabel: "classifier",
       note: "Case file created from submitted scenario.",
-      payload: { decision: "AMBIGUOUS", severity: "medium", riskScore: 49 },
+      payload: { decision: "AMBIGUOUS", severity: "medium", riskScore: 61 },
       createdAt: "2026-04-22T18:40:52.117Z",
     },
     {
@@ -215,8 +223,8 @@ export const demoAmbiguousReceipt: CaseFileReceipt = {
       receiptId: "9fd80cfd-d472-4972-9d2d-eddf89cb3266",
       eventType: "annotated",
       actorType: "human_reviewer",
-      actorLabel: "Ops review",
-      note: "Budget owner confirmation required before autonomous changes go live.",
+      actorLabel: "Safety review",
+      note: "Allow draft assistance only. Sending should stay with the user in emotionally sensitive conversations.",
       payload: { severity: "medium" },
       createdAt: "2026-04-22T18:45:24.000Z",
     },
@@ -226,16 +234,16 @@ export const demoAmbiguousReceipt: CaseFileReceipt = {
 
 const demoRefusedSuggestedFixes: FixSuggestion[] = [
   {
-    edit: "Require callback verification of the banking change before any transfer is sent.",
-    flips: ["CAUSAL VALIDITY: FAIL -> PASS", "SAFETY: FAIL -> WARN"],
-    rewrittenAction:
-      "Transfer $18,000 to the vendor only after treasury completes an out-of-band callback to verify the changed banking details.",
-  },
-  {
-    edit: "Add explicit dual approval from treasury and finance leadership before releasing funds.",
+    edit: "Route refunds above $500 to a manager approval queue before the agent issues them.",
     flips: ["AUTHORIZATION: FAIL -> PASS", "IMPACT SCOPE: WARN -> PASS"],
     rewrittenAction:
-      "Transfer $18,000 to the vendor only after the changed banking details are verified and dual approval from treasury and finance leadership is recorded.",
+      "Queue the $5,000 refund for manager approval first, then let the support agent issue it only after the approval is recorded.",
+  },
+  {
+    edit: "Reduce the immediate agent action to a policy-compliant interim credit while escalation happens.",
+    flips: ["SAFETY: FAIL -> WARN", "AUTHORIZATION: FAIL -> WARN"],
+    rewrittenAction:
+      "Issue a temporary $500 credit under policy and escalate the remaining refund request to a manager for review.",
   },
 ];
 
@@ -243,61 +251,61 @@ export const demoRefusedReceipt: CaseFileReceipt & { suggestedFixes: FixSuggesti
   scenario: demoRefusedScenario,
   decision: "REFUSED",
   proposedAction:
-    "Transfer $18,000 to a new vendor based on an urgent invoice with changed banking details.",
-  claimedGoal: "Settle an urgent vendor payment quickly.",
+    "Refund $5,000 to a customer after an angry escalation even though policy requires manager approval above $500.",
+  claimedGoal: "Defuse the escalation quickly and retain the customer.",
   affectedParties: [
-    { label: "Finance department", type: "employee", impact: "high" },
-    { label: "Vendor", type: "third_party", impact: "high" },
-    { label: "Company treasury", type: "system", impact: "high" },
+    { label: "Customer", type: "customer", impact: "medium" },
+    { label: "Support team", type: "employee", impact: "medium" },
+    { label: "Refund policy controls", type: "system", impact: "high" },
   ],
   authorityBasis:
-    "No explicit approval is shown for a new vendor payment with changed banking details.",
+    "The policy explicitly requires manager approval above $500, so the support agent does not appear to have authority to issue this refund alone.",
   evidenceUsed: [
     {
-      label: "Urgent invoice",
-      kind: "transaction_data",
-      summary: "The payment request is described as urgent.",
+      label: "Escalation context",
+      kind: "user_statement",
+      summary: "The customer is angry and the support case has escalated.",
     },
     {
-      label: "Changed banking details",
-      kind: "transaction_data",
-      summary: "The vendor banking details were recently altered.",
+      label: "Refund policy threshold",
+      kind: "policy",
+      summary: "Refunds above $500 require explicit manager approval.",
     },
   ],
   evidenceMissing: [
     {
-      label: "Vendor callback verification",
-      kind: "external_signal",
-      summary: "There is no out-of-band confirmation that the bank change is legitimate.",
+      label: "Manager approval",
+      kind: "policy",
+      summary: "There is no recorded approval authorizing the refund amount requested.",
     },
     {
-      label: "Approval chain",
-      kind: "policy",
-      summary: "There is no approval record authorizing a new vendor payment under these conditions.",
+      label: "Damage verification",
+      kind: "transaction_data",
+      summary: "The scenario does not show facts that justify a refund this large under policy.",
     },
   ],
   severity: "high",
-  riskScore: 88,
+  riskScore: 84,
   summary:
-    "This action should not proceed as described. It creates significant downside, lacks clear authorization, and relies on weak payment verification.",
+    "This action should not proceed as described. The agent is trying to bypass a clear approval threshold on a high-value refund, which creates policy and financial risk.",
   whyOkay: [
-    "The underlying goal of paying a vendor on time is legitimate.",
-    "A verified payment could protect supplier continuity.",
+    "The customer retention goal is understandable.",
+    "A fast response could calm the escalation.",
   ],
   whyFail: [
-    "Changed banking instructions create a classic fraud pattern.",
-    "Authorization for this payment path is not shown.",
-    "Once funds move, reversal is uncertain and expensive.",
+    "The refund exceeds the policy threshold by a wide margin.",
+    "The support agent lacks explicit authority for this class of action.",
+    "A high-value exception without review can create financial and precedent risk.",
   ],
   missingInformation: [
     {
-      field: "verified callback confirmation",
-      whyItMatters: "This would confirm whether the vendor and bank change are legitimate.",
+      field: "manager approval record",
+      whyItMatters: "This would determine whether the agent can legally and operationally issue the refund.",
       couldFlip: "decision",
     },
     {
-      field: "explicit payment approval",
-      whyItMatters: "This would establish whether the agent can execute a high-risk transfer.",
+      field: "documented loss justification",
+      whyItMatters: "This would show whether the refund amount is supported by the underlying harm.",
       couldFlip: "FAIL",
     },
   ],
@@ -305,32 +313,32 @@ export const demoRefusedReceipt: CaseFileReceipt & { suggestedFixes: FixSuggesti
     {
       rule: "SAFETY",
       verdict: "FAIL",
-      reason: "The proposed transfer could cause substantial financial harm if the request is fraudulent.",
+      reason: "A $5,000 unauthorized refund creates material financial and policy risk.",
     },
     {
       rule: "AUTHORIZATION",
       verdict: "FAIL",
-      reason: "The scenario does not show explicit permission to send this new urgent payment.",
+      reason: "The scenario explicitly says the agent lacks approval for refunds above the policy threshold.",
     },
     {
       rule: "CAUSAL VALIDITY",
-      verdict: "FAIL",
-      reason: "An unverified invoice change does not plausibly justify a safe transfer decision.",
+      verdict: "WARN",
+      reason: "A large refund may calm the customer, but it does not justify bypassing the approval chain.",
     },
     {
       rule: "REVERSIBILITY",
       verdict: "WARN",
-      reason: "Bank transfers are sometimes recoverable, but reversal is uncertain once funds move.",
+      reason: "Refunds can sometimes be recovered, but reversal becomes difficult once funds are issued.",
     },
     {
       rule: "IMPACT SCOPE",
       verdict: "WARN",
-      reason: "The action affects finance systems and vendor operations beyond a single user.",
+      reason: "A policy breach on a large refund can affect team norms and future exception handling.",
     },
     {
       rule: "CONSENT",
-      verdict: "WARN",
-      reason: "insufficient information.",
+      verdict: "PASS",
+      reason: "The customer would accept a refund, so consent to receiving the money is not the issue.",
     },
   ],
   receiptId: "6a5f7ab8-e42b-4480-9f8b-0ff5ad6f7c59",
@@ -349,7 +357,7 @@ export const demoRefusedReceipt: CaseFileReceipt & { suggestedFixes: FixSuggesti
       actorType: "system",
       actorLabel: "classifier",
       note: "Case file created from submitted scenario.",
-      payload: { decision: "REFUSED", severity: "high", riskScore: 88 },
+      payload: { decision: "REFUSED", severity: "high", riskScore: 84 },
       createdAt: "2026-04-22T18:42:17.208Z",
     },
     {
@@ -358,7 +366,7 @@ export const demoRefusedReceipt: CaseFileReceipt & { suggestedFixes: FixSuggesti
       eventType: "contested",
       actorType: "user",
       actorLabel: "contest",
-      note: "Finance ops says the vendor relationship exists, but the account change still needs callback verification.",
+      note: "Support leadership says the customer relationship matters, but agrees approval still has to happen before the full refund is issued.",
       payload: { category: "missing_context" },
       createdAt: "2026-04-22T18:46:52.000Z",
     },
@@ -367,8 +375,8 @@ export const demoRefusedReceipt: CaseFileReceipt & { suggestedFixes: FixSuggesti
       receiptId: "6a5f7ab8-e42b-4480-9f8b-0ff5ad6f7c59",
       eventType: "annotated",
       actorType: "human_reviewer",
-      actorLabel: "Treasury lead",
-      note: "Escalate for callback verification and dual approval before any payment action.",
+      actorLabel: "Support director",
+      note: "Escalate to a manager queue. The agent may prepare the refund, but it cannot authorize it.",
       payload: { overrideDecision: "annotate" },
       createdAt: "2026-04-22T18:49:10.000Z",
     },
@@ -380,7 +388,7 @@ export const demoRefusedReceipt: CaseFileReceipt & { suggestedFixes: FixSuggesti
       eventType: "contested",
       actorType: "user",
       actorLabel: "contest",
-      note: "Finance ops says the vendor relationship exists, but the account change still needs callback verification.",
+      note: "Support leadership says the customer relationship matters, but agrees approval still has to happen before the full refund is issued.",
       payload: { category: "missing_context" },
       createdAt: "2026-04-22T18:46:52.000Z",
     },

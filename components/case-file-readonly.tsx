@@ -126,7 +126,7 @@ export function CaseFileReadonly({
             <div className={`rounded-[28px] border p-5 ${surfaceTone(receipt.decision)}`}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-3xl">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Case verdict</p>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">What Ovrule concluded</p>
                   <div className={`mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold tracking-[0.18em] ${surfaceTone(receipt.decision)}`}>
                     {decisionIcon(receipt.decision)}
                     {receipt.decision}
@@ -163,7 +163,7 @@ export function CaseFileReadonly({
 
           <div className="grid gap-5 lg:grid-cols-2">
             <section className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5">
-              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Evidence and gaps</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">What the model used, and what it still needs</p>
               <div className="mt-4 space-y-4">
                 <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
                   <p className="text-sm font-medium text-neutral-100">Evidence used</p>
@@ -196,7 +196,7 @@ export function CaseFileReadonly({
             </section>
 
             <section className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5">
-              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Receipt and history</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">What got recorded</p>
               <div className="mt-4 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] p-4 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.08)_1px,transparent_0)] [background-size:14px_14px]">
                 <button
                   type="button"
