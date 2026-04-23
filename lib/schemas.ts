@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+export const RULE_NAMES = [
+  "SAFETY",
+  "AUTHORIZATION",
+  "CAUSAL VALIDITY",
+  "REVERSIBILITY",
+  "IMPACT SCOPE",
+  "CONSENT",
+] as const;
+
 export const classifyScenarioSchema = z.object({
   scenario: z
     .string()
@@ -35,14 +44,7 @@ export const overrideDecisionSchema = z.object({
 });
 
 export const auditRuleSchema = z.object({
-  rule: z.enum([
-    "SAFETY",
-    "AUTHORIZATION",
-    "CAUSAL VALIDITY",
-    "REVERSIBILITY",
-    "IMPACT SCOPE",
-    "CONSENT",
-  ]),
+  rule: z.enum(RULE_NAMES),
   verdict: z.enum(["PASS", "WARN", "FAIL"]),
   reason: z.string(),
 });
@@ -122,9 +124,50 @@ export const caseFileReceiptSchema = auditClassificationSchema.extend({
   challengeHistory: z.array(historyEventSchema),
 });
 
+export const classifySessionStartedEventSchema = z.object({
+  type: z.literal("session.started"),
+  receiptId: z.string().uuid(),
+  startedAt: z.string(),
+  scenario: z.string(),
+});
+
+export const classifyRuleStartedEventSchema = z.object({
+  type: z.literal("rule.started"),
+  rule: z.enum(RULE_NAMES),
+  index: z.number().int().min(0).max(5),
+});
+
+export const classifyRuleCompletedEventSchema = z.object({
+  type: z.literal("rule.completed"),
+  rule: z.enum(RULE_NAMES),
+  index: z.number().int().min(0).max(5),
+  verdict: z.enum(["PASS", "WARN", "FAIL"]),
+  reason: z.string(),
+});
+
+export const classifyAnalysisCompletedEventSchema = z.object({
+  type: z.literal("analysis.completed"),
+  receipt: caseFileReceiptSchema,
+});
+
+export const classifySessionErrorEventSchema = z.object({
+  type: z.literal("session.error"),
+  message: z.string(),
+});
+
+export const classifyStreamEventSchema = z.discriminatedUnion("type", [
+  classifySessionStartedEventSchema,
+  classifyRuleStartedEventSchema,
+  classifyRuleCompletedEventSchema,
+  classifyAnalysisCompletedEventSchema,
+  classifySessionErrorEventSchema,
+]);
+
+export type RuleName = (typeof RULE_NAMES)[number];
 export type ClassifyScenarioInput = z.infer<typeof classifyScenarioSchema>;
 export type ContestDecisionInput = z.infer<typeof contestDecisionSchema>;
 export type OverrideDecisionInput = z.infer<typeof overrideDecisionSchema>;
 export type AuditClassification = z.infer<typeof auditClassificationSchema>;
 export type HistoryEvent = z.infer<typeof historyEventSchema>;
 export type CaseFileReceipt = z.infer<typeof caseFileReceiptSchema>;
+export type ClassifyStreamEvent = z.infer<typeof classifyStreamEventSchema>;

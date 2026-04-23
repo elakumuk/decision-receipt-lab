@@ -20,13 +20,11 @@ import {
   Siren,
   Stamp,
   UserRoundCheck,
-  Users,
-  Waypoints,
   XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import type { CaseFileReceipt, HistoryEvent } from "@/lib/schemas";
+import type { CaseFileReceipt, HistoryEvent, RuleName } from "@/lib/schemas";
 
 type LegacyReceipt = {
   decision: "ADMISSIBLE" | "AMBIGUOUS" | "REFUSED";
@@ -50,6 +48,56 @@ type OverrideResponse = {
   historyEventId: string;
   createdAt: string;
 };
+
+type StreamRuleState = {
+  rule: RuleName;
+  status: "pending" | "loading" | "done";
+  verdict?: "PASS" | "WARN" | "FAIL";
+  reason?: string;
+};
+
+type StreamState = {
+  receiptId?: string;
+  startedAt?: string;
+  rules: StreamRuleState[];
+};
+
+type StreamEventPayload =
+  | {
+      type: "session.started";
+      receiptId: string;
+      startedAt: string;
+      scenario: string;
+    }
+  | {
+      type: "rule.started";
+      rule: RuleName;
+      index: number;
+    }
+  | {
+      type: "rule.completed";
+      rule: RuleName;
+      index: number;
+      verdict: "PASS" | "WARN" | "FAIL";
+      reason: string;
+    }
+  | {
+      type: "analysis.completed";
+      receipt: CaseFileReceipt;
+    }
+  | {
+      type: "session.error";
+      message: string;
+    };
+
+const RULE_SEQUENCE: RuleName[] = [
+  "SAFETY",
+  "AUTHORIZATION",
+  "CAUSAL VALIDITY",
+  "REVERSIBILITY",
+  "IMPACT SCOPE",
+  "CONSENT",
+];
 
 const exampleScenarios = [
   {
@@ -87,7 +135,6 @@ function surfaceTone(decision: ReceiptResponse["decision"]) {
     return {
       badge: "border-emerald-400/35 bg-emerald-400/8 text-emerald-200",
       soft: "border-emerald-400/20 bg-emerald-400/8",
-      bar: "bg-emerald-400",
     };
   }
 
@@ -95,14 +142,12 @@ function surfaceTone(decision: ReceiptResponse["decision"]) {
     return {
       badge: "border-amber-400/35 bg-amber-400/8 text-amber-200",
       soft: "border-amber-400/20 bg-amber-400/8",
-      bar: "bg-amber-400",
     };
   }
 
   return {
     badge: "border-red-400/35 bg-red-400/8 text-red-200",
     soft: "border-red-400/20 bg-red-400/8",
-    bar: "bg-red-400",
   };
 }
 
@@ -266,26 +311,6 @@ function StatusCard({
   );
 }
 
-function LoadingBlock() {
-  return (
-    <div className="space-y-4">
-      <div className="h-4 w-28 animate-pulse rounded-full bg-white/[0.05]" />
-      <div className="h-14 w-52 animate-pulse rounded-full bg-white/[0.06]" />
-      <div className="h-5 w-full animate-pulse rounded-full bg-white/[0.04]" />
-      <div className="h-5 w-3/4 animate-pulse rounded-full bg-white/[0.04]" />
-      <div className="grid gap-3 md:grid-cols-2">
-        {[0, 1].map((key) => (
-          <div key={key} className="rounded-[24px] border border-white/6 bg-white/[0.02] p-4">
-            <div className="h-4 w-28 animate-pulse rounded-full bg-white/[0.05]" />
-            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/[0.04]" />
-            <div className="mt-2 h-4 w-3/4 animate-pulse rounded-full bg-white/[0.04]" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function InputComposer({
   scenario,
   onChange,
@@ -343,6 +368,78 @@ function InputComposer({
   );
 }
 
+function StreamRuleRow({ item }: { item: StreamRuleState }) {
+  if (item.status === "done" && item.verdict && item.reason) {
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-[22px] border border-white/8 bg-black/20 p-4"
+      >
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5">{ruleIcon(item.verdict)}</div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-medium text-neutral-100">{item.rule}</p>
+              <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] ${ruleTone(item.verdict)}`}>
+                {item.verdict}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-neutral-400">{item.reason}</p>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <div className="rounded-[22px] border border-white/8 bg-black/20 p-4">
+      <div className="flex items-start gap-3">
+        <div className="mt-1 h-3 w-3 rounded-full bg-white/[0.14]" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3">
+            <p className="text-sm font-medium text-neutral-200">{item.rule}</p>
+            <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
+              {item.status === "loading" ? "Evaluating…" : "Queued"}
+            </span>
+          </div>
+          <div className="mt-3 overflow-hidden rounded-full bg-white/[0.05]">
+            <div
+              className={`h-3 w-full bg-gradient-to-r from-transparent via-white/10 to-transparent ${
+                item.status === "loading" ? "animate-pulse" : ""
+              }`}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function parseSseBlock(block: string): { event?: string; data?: string } | null {
+  const lines = block.split("\n");
+  let eventName: string | undefined;
+  const dataLines: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("event:")) {
+      eventName = line.slice(6).trim();
+    } else if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).trim());
+    }
+  }
+
+  if (!eventName || dataLines.length === 0) {
+    return null;
+  }
+
+  return {
+    event: eventName,
+    data: dataLines.join("\n"),
+  };
+}
+
 export function DecisionReceiptLab({
   initialScenario = "",
   initialReceipt = null,
@@ -352,6 +449,7 @@ export function DecisionReceiptLab({
 }) {
   const [scenario, setScenario] = useState(initialScenario);
   const [receipt, setReceipt] = useState<ReceiptResponse | null>(initialReceipt);
+  const [streamState, setStreamState] = useState<StreamState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isContestOpen, setIsContestOpen] = useState(false);
@@ -391,10 +489,16 @@ export function DecisionReceiptLab({
     ? `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(caseFile, null, 2))}`
     : "";
 
+  const showWorkspace = Boolean(caseFile || streamState || isSubmitting);
+
   async function handleSubmit() {
     setIsSubmitting(true);
     setError(null);
     setToastMessage(null);
+    setReceipt(null);
+    setStreamState({
+      rules: RULE_SEQUENCE.map((rule) => ({ rule, status: "pending" })),
+    });
 
     try {
       const response = await fetch("/api/classify", {
@@ -403,14 +507,97 @@ export function DecisionReceiptLab({
         body: JSON.stringify({ scenario }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
+        const data = await response.json();
         throw new Error(data.error ?? "Unable to classify this action.");
       }
 
-      setReceipt(data);
+      const reader = response.body?.getReader();
+
+      if (!reader) {
+        throw new Error("No response stream was returned.");
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() ?? "";
+
+        for (const block of blocks) {
+          const parsedBlock = parseSseBlock(block);
+
+          if (!parsedBlock?.data) {
+            continue;
+          }
+
+          const payload = JSON.parse(parsedBlock.data) as StreamEventPayload;
+
+          if (payload.type === "session.started") {
+            setStreamState((current) => ({
+              receiptId: payload.receiptId,
+              startedAt: payload.startedAt,
+              rules: current?.rules ?? RULE_SEQUENCE.map((rule) => ({ rule, status: "pending" })),
+            }));
+            continue;
+          }
+
+          if (payload.type === "rule.started") {
+            setStreamState((current) =>
+              current
+                ? {
+                    ...current,
+                    rules: current.rules.map((rule, index) =>
+                      index === payload.index ? { ...rule, status: "loading" } : rule,
+                    ),
+                  }
+                : current,
+            );
+            continue;
+          }
+
+          if (payload.type === "rule.completed") {
+            setStreamState((current) =>
+              current
+                ? {
+                    ...current,
+                    rules: current.rules.map((rule, index) =>
+                      index === payload.index
+                        ? {
+                            ...rule,
+                            status: "done",
+                            verdict: payload.verdict,
+                            reason: payload.reason,
+                          }
+                        : rule,
+                    ),
+                  }
+                : current,
+            );
+            continue;
+          }
+
+          if (payload.type === "analysis.completed") {
+            setReceipt(payload.receipt);
+            setStreamState(null);
+            continue;
+          }
+
+          if (payload.type === "session.error") {
+            throw new Error(payload.message);
+          }
+        }
+      }
     } catch (caughtError) {
+      setStreamState(null);
       setError(caughtError instanceof Error ? caughtError.message : "Unable to classify this action.");
     } finally {
       setIsSubmitting(false);
@@ -536,7 +723,7 @@ export function DecisionReceiptLab({
   return (
     <section id="tool" className="relative">
       <AnimatePresence mode="wait">
-        {!caseFile && !isSubmitting ? (
+        {!showWorkspace ? (
           <motion.div key="empty-tool" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <InputComposer
               scenario={scenario}
@@ -549,7 +736,7 @@ export function DecisionReceiptLab({
             </div>
           </motion.div>
         ) : (
-          <motion.div key={caseFile?.receiptId ?? "loading"} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <motion.div key={caseFile?.receiptId ?? "streaming"} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className="grid gap-5 xl:grid-cols-[0.78fr_1.22fr]">
               <motion.aside
                 initial={{ opacity: 0, y: 22 }}
@@ -618,8 +805,24 @@ export function DecisionReceiptLab({
                   transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }}
                   className="relative overflow-hidden rounded-[34px] border border-white/8 bg-white/[0.03] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.38)] sm:p-7"
                 >
-                  {isSubmitting || !caseFile ? (
-                    <LoadingBlock />
+                  {!caseFile ? (
+                    <>
+                      <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Live audit</p>
+                      <h4 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-neutral-50">
+                        Ovrule is evaluating the case rule by rule.
+                      </h4>
+                      <p className="mt-4 text-sm leading-7 text-neutral-400">
+                        Verdict, summary, and risk score will appear after all six rule checks complete.
+                      </p>
+
+                      <div className="mt-6 space-y-3">
+                        <AnimatePresence initial={false}>
+                          {(streamState?.rules ?? RULE_SEQUENCE.map((rule) => ({ rule, status: "pending" as const }))).map((item) => (
+                            <StreamRuleRow key={item.rule} item={item} />
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                    </>
                   ) : (
                     <>
                       {caseFile.decision === "REFUSED" ? (
@@ -746,9 +949,13 @@ export function DecisionReceiptLab({
                     className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
                   >
                     <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Evidence and gaps</p>
-                    {isSubmitting || !caseFile ? (
+                    {!caseFile ? (
                       <div className="mt-4">
-                        <LoadingBlock />
+                        <StatusCard
+                          icon={<FileWarning className="h-5 w-5" />}
+                          title="Evidence is being assembled."
+                          body="Ovrule waits until the full audit is done before revealing supporting evidence, missing information, and affected parties."
+                        />
                       </div>
                     ) : (
                       <div className="mt-4 space-y-4">
@@ -830,9 +1037,13 @@ export function DecisionReceiptLab({
                     className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
                   >
                     <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Receipt and timeline</p>
-                    {isSubmitting || !caseFile ? (
+                    {!caseFile ? (
                       <div className="mt-4">
-                        <LoadingBlock />
+                        <StatusCard
+                          icon={<Fingerprint className="h-5 w-5" />}
+                          title="Receipt metadata is pending."
+                          body="Hash, timestamp, history, and receipt links appear after the final case file is generated and stored."
+                        />
                       </div>
                     ) : (
                       <div className="mt-4 flex h-full flex-col">

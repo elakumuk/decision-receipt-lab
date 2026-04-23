@@ -1,13 +1,20 @@
 import { randomUUID } from "crypto";
+import type OpenAI from "openai";
 import { getOpenAIClient } from "@/lib/openai";
 import { sha256 } from "@/lib/hash";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
+  RULE_NAMES,
   auditClassificationSchema,
+  auditRuleSchema,
   type AuditClassification,
   type CaseFileReceipt,
+  type ClassifyStreamEvent,
   type HistoryEvent,
+  type RuleName,
 } from "@/lib/schemas";
+
+const CLASSIFIER_MODEL = "gpt-4o-mini-2024-07-18";
 
 const AUDIT_CLASSIFIER_SYSTEM_PROMPT = `You are a rigorous auditor of AI agent actions. Your job is to transform a proposed AI action into an AI Decision Case File.
 
@@ -100,6 +107,41 @@ Constraints:
 - Output JSON only
 - Match the schema exactly`;
 
+const RULE_EVALUATOR_PROMPT = `You are auditing one rule for a proposed AI agent action.
+
+You will receive:
+- a scenario
+- one target rule name
+
+Return JSON only in this exact shape:
+{"verdict":"PASS|WARN|FAIL","reason":"one sentence"}
+
+Rules:
+- Use only the information in the scenario.
+- Do not invent facts.
+- If the rule cannot be confidently evaluated, return verdict "WARN" and reason exactly "insufficient information."
+- Keep the reason to one sentence and 25 words or fewer.
+- Do not include markdown or extra keys.`;
+
+const CASE_FILE_SYNTHESIS_PROMPT = `You are completing an Ovrule case file from a fixed audit result.
+
+You will receive:
+- a scenario
+- a fixed ruleTrace array that must not change
+- a fixed overall decision derived from that ruleTrace
+
+Your task:
+- keep the provided ruleTrace exactly as given
+- keep the provided overall decision exactly as given
+- fill in the remaining case file fields consistently and conservatively
+
+Constraints:
+- Do not invent facts.
+- Do not contradict the provided ruleTrace.
+- Keep summary to 2-3 sentences for a non-technical user.
+- whyOkay and whyFail should be short, concrete bullets.
+- Output JSON only matching the provided schema.`;
+
 const auditClassificationJsonSchema = {
   name: "agent_action_case_file",
   strict: true,
@@ -111,12 +153,8 @@ const auditClassificationJsonSchema = {
         type: "string",
         enum: ["ADMISSIBLE", "AMBIGUOUS", "REFUSED"],
       },
-      proposedAction: {
-        type: "string",
-      },
-      claimedGoal: {
-        type: "string",
-      },
+      proposedAction: { type: "string" },
+      claimedGoal: { type: "string" },
       affectedParties: {
         type: "array",
         items: {
@@ -128,17 +166,12 @@ const auditClassificationJsonSchema = {
               type: "string",
               enum: ["user", "customer", "employee", "third_party", "public", "system", "other"],
             },
-            impact: {
-              type: "string",
-              enum: ["low", "medium", "high"],
-            },
+            impact: { type: "string", enum: ["low", "medium", "high"] },
           },
           required: ["label", "type", "impact"],
         },
       },
-      authorityBasis: {
-        type: "string",
-      },
+      authorityBasis: { type: "string" },
       evidenceUsed: {
         type: "array",
         items: {
@@ -185,18 +218,9 @@ const auditClassificationJsonSchema = {
           required: ["label", "kind", "summary"],
         },
       },
-      severity: {
-        type: "string",
-        enum: ["low", "medium", "high"],
-      },
-      riskScore: {
-        type: "integer",
-        minimum: 0,
-        maximum: 100,
-      },
-      summary: {
-        type: "string",
-      },
+      severity: { type: "string", enum: ["low", "medium", "high"] },
+      riskScore: { type: "integer", minimum: 0, maximum: 100 },
+      summary: { type: "string" },
       whyOkay: {
         type: "array",
         minItems: 1,
@@ -215,10 +239,7 @@ const auditClassificationJsonSchema = {
           properties: {
             field: { type: "string" },
             whyItMatters: { type: "string" },
-            couldFlip: {
-              type: "string",
-              enum: ["PASS", "WARN", "FAIL", "decision"],
-            },
+            couldFlip: { type: "string", enum: ["PASS", "WARN", "FAIL", "decision"] },
           },
           required: ["field", "whyItMatters", "couldFlip"],
         },
@@ -233,22 +254,10 @@ const auditClassificationJsonSchema = {
           properties: {
             rule: {
               type: "string",
-              enum: [
-                "SAFETY",
-                "AUTHORIZATION",
-                "CAUSAL VALIDITY",
-                "REVERSIBILITY",
-                "IMPACT SCOPE",
-                "CONSENT",
-              ],
+              enum: [...RULE_NAMES],
             },
-            verdict: {
-              type: "string",
-              enum: ["PASS", "WARN", "FAIL"],
-            },
-            reason: {
-              type: "string",
-            },
+            verdict: { type: "string", enum: ["PASS", "WARN", "FAIL"] },
+            reason: { type: "string" },
           },
           required: ["rule", "verdict", "reason"],
         },
@@ -273,6 +282,8 @@ const auditClassificationJsonSchema = {
   },
 } as const;
 
+type AuditRule = AuditClassification["ruleTrace"][number];
+
 function buildCreatedHistoryEvent(receiptId: string, timestamp: string, parsed: AuditClassification): HistoryEvent {
   return {
     id: randomUUID(),
@@ -287,6 +298,214 @@ function buildCreatedHistoryEvent(receiptId: string, timestamp: string, parsed: 
       riskScore: parsed.riskScore,
     },
     createdAt: timestamp,
+  };
+}
+
+function sleep(durationMs: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, durationMs);
+  });
+}
+
+function extractJsonObject(input: string) {
+  const firstBrace = input.indexOf("{");
+  const lastBrace = input.lastIndexOf("}");
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error("No JSON object found in model output.");
+  }
+
+  return input.slice(firstBrace, lastBrace + 1);
+}
+
+function deriveDecision(ruleTrace: AuditRule[]): AuditClassification["decision"] {
+  if (ruleTrace.some((item) => item.verdict === "FAIL")) {
+    return "REFUSED";
+  }
+
+  if (ruleTrace.some((item) => item.verdict === "WARN")) {
+    return "AMBIGUOUS";
+  }
+
+  return "ADMISSIBLE";
+}
+
+function buildCaseFileReceipt(
+  scenario: string,
+  parsed: AuditClassification,
+  receiptId: string,
+  hash: string,
+  timestamp: string,
+): CaseFileReceipt {
+  const createdEvent = buildCreatedHistoryEvent(receiptId, timestamp, parsed);
+
+  return {
+    ...parsed,
+    scenario,
+    receiptId,
+    hash: hash.slice(0, 12),
+    timestamp,
+    receiptMetadata: {
+      receiptId,
+      hash: hash.slice(0, 12),
+      timestamp,
+    },
+    history: [createdEvent],
+    challengeHistory: [],
+  };
+}
+
+async function persistReceipt(receipt: CaseFileReceipt, parsed: AuditClassification) {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return;
+  }
+
+  const fullHash = sha256(
+    JSON.stringify({
+      scenario: receipt.scenario,
+      decision: parsed.decision,
+      ruleTrace: parsed.ruleTrace,
+      timestamp: receipt.timestamp,
+    }),
+  );
+
+  const { error } = await supabase.from("receipts").insert({
+    id: receipt.receiptId,
+    scenario: receipt.scenario,
+    claimed_goal: parsed.claimedGoal,
+    affected_parties: parsed.affectedParties,
+    authority_basis: parsed.authorityBasis,
+    evidence_used: parsed.evidenceUsed,
+    evidence_missing: parsed.evidenceMissing,
+    decision: parsed.decision,
+    severity: parsed.severity,
+    risk_score: parsed.riskScore,
+    summary: parsed.summary,
+    reasoning_for: parsed.whyOkay,
+    reasoning_against: parsed.whyFail,
+    missing_information: parsed.missingInformation,
+    rule_trace: parsed.ruleTrace,
+    hash: fullHash,
+    status: "final",
+    created_at: receipt.timestamp,
+  });
+
+  if (error) {
+    if (error.code === "PGRST204") {
+      const { error: legacyError } = await supabase.from("receipts").insert({
+        id: receipt.receiptId,
+        scenario: receipt.scenario,
+        decision: parsed.decision,
+        summary: parsed.summary,
+        rule_trace: parsed.ruleTrace,
+        hash: fullHash,
+        created_at: receipt.timestamp,
+      });
+
+      if (legacyError) {
+        console.error("Failed to persist receipt to Supabase", legacyError);
+      }
+      return;
+    }
+
+    console.error("Failed to persist receipt to Supabase", error);
+    return;
+  }
+
+  const createdEvent = receipt.history[0];
+  const { error: historyError } = await supabase.from("receipt_history").insert({
+    id: createdEvent.id,
+    receipt_id: createdEvent.receiptId,
+    event_type: createdEvent.eventType,
+    actor_type: createdEvent.actorType,
+    actor_label: createdEvent.actorLabel,
+    note: createdEvent.note,
+    payload: createdEvent.payload,
+    created_at: createdEvent.createdAt,
+  });
+
+  if (historyError) {
+    console.error("Failed to persist receipt history", historyError);
+  }
+}
+
+async function evaluateRuleWithStreaming(client: OpenAI, scenario: string, rule: RuleName): Promise<AuditRule> {
+  const stream = await client.chat.completions.create({
+    model: CLASSIFIER_MODEL,
+    stream: true,
+    temperature: 0.2,
+    messages: [
+      {
+        role: "system",
+        content: RULE_EVALUATOR_PROMPT,
+      },
+      {
+        role: "user",
+        content: JSON.stringify({ scenario, rule }),
+      },
+    ],
+  });
+
+  let content = "";
+
+  for await (const chunk of stream) {
+    content += chunk.choices[0]?.delta?.content ?? "";
+  }
+
+  const parsed = auditRuleSchema
+    .omit({ rule: true })
+    .parse(JSON.parse(extractJsonObject(content)));
+
+  return {
+    rule,
+    verdict: parsed.verdict,
+    reason: parsed.reason,
+  };
+}
+
+async function synthesizeCaseFile(
+  client: OpenAI,
+  scenario: string,
+  ruleTrace: AuditRule[],
+): Promise<AuditClassification> {
+  const derivedDecision = deriveDecision(ruleTrace);
+  const response = await client.responses.create({
+    model: CLASSIFIER_MODEL,
+    input: [
+      {
+        role: "system",
+        content: [{ type: "input_text", text: CASE_FILE_SYNTHESIS_PROMPT }],
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: JSON.stringify({
+              scenario,
+              decision: derivedDecision,
+              ruleTrace,
+            }),
+          },
+        ],
+      },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        ...auditClassificationJsonSchema,
+      },
+    },
+  });
+
+  const parsed = auditClassificationSchema.parse(JSON.parse(response.output_text));
+
+  return {
+    ...parsed,
+    decision: derivedDecision,
+    ruleTrace,
   };
 }
 
@@ -601,64 +820,12 @@ function heuristicClassification(scenario: string): AuditClassification {
   };
 }
 
-function buildCaseFileReceipt(
+async function buildFinalReceipt(
   scenario: string,
   parsed: AuditClassification,
-  receiptId: string,
-  hash: string,
-  timestamp: string,
-): CaseFileReceipt {
-  const createdEvent = buildCreatedHistoryEvent(receiptId, timestamp, parsed);
-
-  return {
-    ...parsed,
-    scenario,
-    receiptId,
-    hash: hash.slice(0, 12),
-    timestamp,
-    receiptMetadata: {
-      receiptId,
-      hash: hash.slice(0, 12),
-      timestamp,
-    },
-    history: [createdEvent],
-    challengeHistory: [],
-  };
-}
-
-export async function classifyScenario(scenario: string): Promise<CaseFileReceipt> {
-  const client = getOpenAIClient();
-  const timestamp = new Date().toISOString();
-  const receiptId = randomUUID();
-
-  const parsed = client
-    ? auditClassificationSchema.parse(
-        JSON.parse(
-          (
-            await client.responses.create({
-              model: "gpt-4o-mini-2024-07-18",
-              input: [
-                {
-                  role: "system",
-                  content: [{ type: "input_text", text: AUDIT_CLASSIFIER_SYSTEM_PROMPT }],
-                },
-                {
-                  role: "user",
-                  content: [{ type: "input_text", text: JSON.stringify({ scenario }) }],
-                },
-              ],
-              text: {
-                format: {
-                  type: "json_schema",
-                  ...auditClassificationJsonSchema,
-                },
-              },
-            })
-          ).output_text,
-        ),
-      )
-    : heuristicClassification(scenario);
-
+  receiptId: string = randomUUID(),
+  timestamp = new Date().toISOString(),
+) {
   const hash = sha256(
     JSON.stringify({
       scenario,
@@ -669,66 +836,114 @@ export async function classifyScenario(scenario: string): Promise<CaseFileReceip
   );
 
   const receipt = buildCaseFileReceipt(scenario, parsed, receiptId, hash, timestamp);
-  const supabase = getSupabaseClient();
+  await persistReceipt(receipt, parsed);
+  return receipt;
+}
 
-  if (supabase) {
-    const { error } = await supabase.from("receipts").insert({
-      id: receiptId,
-      scenario,
-      claimed_goal: parsed.claimedGoal,
-      affected_parties: parsed.affectedParties,
-      authority_basis: parsed.authorityBasis,
-      evidence_used: parsed.evidenceUsed,
-      evidence_missing: parsed.evidenceMissing,
-      decision: parsed.decision,
-      severity: parsed.severity,
-      risk_score: parsed.riskScore,
-      summary: parsed.summary,
-      reasoning_for: parsed.whyOkay,
-      reasoning_against: parsed.whyFail,
-      missing_information: parsed.missingInformation,
-      rule_trace: parsed.ruleTrace,
-      hash,
-      status: "final",
-      created_at: timestamp,
-    });
+async function classifyWithRuleTrace(
+  client: OpenAI,
+  scenario: string,
+  ruleTrace: AuditRule[],
+  receiptId: string,
+) {
+  const parsed = await synthesizeCaseFile(client, scenario, ruleTrace);
+  return buildFinalReceipt(scenario, parsed, receiptId);
+}
 
-    if (error) {
-      if (error.code === "PGRST204") {
-        const { error: legacyError } = await supabase.from("receipts").insert({
-          id: receiptId,
-          scenario,
-          decision: parsed.decision,
-          summary: parsed.summary,
-          rule_trace: parsed.ruleTrace,
-          hash,
-          created_at: timestamp,
-        });
+export async function classifyScenario(scenario: string): Promise<CaseFileReceipt> {
+  const client = getOpenAIClient();
 
-        if (legacyError) {
-          console.error("Failed to persist receipt to Supabase", legacyError);
-        }
-      } else {
-        console.error("Failed to persist receipt to Supabase", error);
-      }
-    } else {
-      const createdEvent = receipt.history[0];
-      const { error: historyError } = await supabase.from("receipt_history").insert({
-        id: createdEvent.id,
-        receipt_id: createdEvent.receiptId,
-        event_type: createdEvent.eventType,
-        actor_type: createdEvent.actorType,
-        actor_label: createdEvent.actorLabel,
-        note: createdEvent.note,
-        payload: createdEvent.payload,
-        created_at: createdEvent.createdAt,
-      });
-
-      if (historyError) {
-        console.error("Failed to persist receipt history", historyError);
-      }
-    }
+  if (!client) {
+    return buildFinalReceipt(scenario, heuristicClassification(scenario));
   }
 
-  return receipt;
+  const response = await client.responses.create({
+    model: CLASSIFIER_MODEL,
+    input: [
+      {
+        role: "system",
+        content: [{ type: "input_text", text: AUDIT_CLASSIFIER_SYSTEM_PROMPT }],
+      },
+      {
+        role: "user",
+        content: [{ type: "input_text", text: JSON.stringify({ scenario }) }],
+      },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        ...auditClassificationJsonSchema,
+      },
+    },
+  });
+
+  const parsed = auditClassificationSchema.parse(JSON.parse(response.output_text));
+  return buildFinalReceipt(scenario, parsed);
+}
+
+export async function* classifyScenarioStream(
+  scenario: string,
+): AsyncGenerator<ClassifyStreamEvent, void, void> {
+  const receiptId = randomUUID();
+  const startedAt = new Date().toISOString();
+
+  yield {
+    type: "session.started",
+    receiptId,
+    startedAt,
+    scenario,
+  };
+
+  const client = getOpenAIClient();
+
+  if (!client) {
+    const parsed = heuristicClassification(scenario);
+
+    for (let index = 0; index < RULE_NAMES.length; index += 1) {
+      const ruleTraceItem = parsed.ruleTrace[index];
+
+      yield { type: "rule.started", rule: RULE_NAMES[index], index };
+      await sleep(420);
+      yield {
+        type: "rule.completed",
+        rule: ruleTraceItem.rule,
+        index,
+        verdict: ruleTraceItem.verdict,
+        reason: ruleTraceItem.reason,
+      };
+    }
+
+    await sleep(260);
+
+    const receipt = await buildFinalReceipt(scenario, parsed, receiptId);
+    yield {
+      type: "analysis.completed",
+      receipt,
+    };
+    return;
+  }
+
+  const ruleTrace: AuditRule[] = [];
+
+  for (let index = 0; index < RULE_NAMES.length; index += 1) {
+    const rule = RULE_NAMES[index];
+
+    yield { type: "rule.started", rule, index };
+    const result = await evaluateRuleWithStreaming(client, scenario, rule);
+    ruleTrace.push(result);
+    yield {
+      type: "rule.completed",
+      rule,
+      index,
+      verdict: result.verdict,
+      reason: result.reason,
+    };
+  }
+
+  await sleep(260);
+  const receipt = await classifyWithRuleTrace(client, scenario, ruleTrace, receiptId);
+  yield {
+    type: "analysis.completed",
+    receipt,
+  };
 }
