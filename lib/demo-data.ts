@@ -1,4 +1,4 @@
-import type { CaseFileReceipt } from "@/lib/schemas";
+import type { CaseFileReceipt, FixSuggestion } from "@/lib/schemas";
 
 export const demoRefusedScenario =
   "A finance agent wants to transfer $18,000 to a new vendor based on an urgent invoice with changed banking details.";
@@ -224,7 +224,22 @@ export const demoAmbiguousReceipt: CaseFileReceipt = {
   challengeHistory: [],
 };
 
-export const demoRefusedReceipt: CaseFileReceipt = {
+const demoRefusedSuggestedFixes: FixSuggestion[] = [
+  {
+    edit: "Require callback verification of the banking change before any transfer is sent.",
+    flips: ["CAUSAL VALIDITY: FAIL -> PASS", "SAFETY: FAIL -> WARN"],
+    rewrittenAction:
+      "Transfer $18,000 to the vendor only after treasury completes an out-of-band callback to verify the changed banking details.",
+  },
+  {
+    edit: "Add explicit dual approval from treasury and finance leadership before releasing funds.",
+    flips: ["AUTHORIZATION: FAIL -> PASS", "IMPACT SCOPE: WARN -> PASS"],
+    rewrittenAction:
+      "Transfer $18,000 to the vendor only after the changed banking details are verified and dual approval from treasury and finance leadership is recorded.",
+  },
+];
+
+export const demoRefusedReceipt: CaseFileReceipt & { suggestedFixes: FixSuggestion[] } = {
   scenario: demoRefusedScenario,
   decision: "REFUSED",
   proposedAction:
@@ -370,4 +385,5 @@ export const demoRefusedReceipt: CaseFileReceipt = {
       createdAt: "2026-04-22T18:46:52.000Z",
     },
   ],
+  suggestedFixes: demoRefusedSuggestedFixes,
 };

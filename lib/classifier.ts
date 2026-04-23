@@ -11,6 +11,7 @@ import {
   type CaseFileReceipt,
   type ClassifyStreamEvent,
   type HistoryEvent,
+  type RevisionMetadata,
   type RuleName,
 } from "@/lib/schemas";
 
@@ -336,6 +337,7 @@ function buildCaseFileReceipt(
   receiptId: string,
   hash: string,
   timestamp: string,
+  extraHistory: HistoryEvent[] = [],
 ): CaseFileReceipt {
   const createdEvent = buildCreatedHistoryEvent(receiptId, timestamp, parsed);
 
@@ -350,12 +352,16 @@ function buildCaseFileReceipt(
       hash: hash.slice(0, 12),
       timestamp,
     },
-    history: [createdEvent],
+    history: [createdEvent, ...extraHistory],
     challengeHistory: [],
   };
 }
 
-async function persistReceipt(receipt: CaseFileReceipt, parsed: AuditClassification) {
+async function persistReceipt(
+  receipt: CaseFileReceipt,
+  parsed: AuditClassification,
+  revision?: RevisionMetadata,
+) {
   const supabase = getSupabaseClient();
 
   if (!supabase) {
@@ -414,20 +420,56 @@ async function persistReceipt(receipt: CaseFileReceipt, parsed: AuditClassificat
     return;
   }
 
-  const createdEvent = receipt.history[0];
-  const { error: historyError } = await supabase.from("receipt_history").insert({
-    id: createdEvent.id,
-    receipt_id: createdEvent.receiptId,
-    event_type: createdEvent.eventType,
-    actor_type: createdEvent.actorType,
-    actor_label: createdEvent.actorLabel,
-    note: createdEvent.note,
-    payload: createdEvent.payload,
-    created_at: createdEvent.createdAt,
-  });
+  const historyRows = receipt.history.map((event) => ({
+    id: event.id,
+    receipt_id: event.receiptId,
+    event_type: event.eventType,
+    actor_type: event.actorType,
+    actor_label: event.actorLabel,
+    note: event.note,
+    payload: event.payload,
+    created_at: event.createdAt,
+  }));
+
+  const { error: historyError } = await supabase.from("receipt_history").insert(historyRows);
 
   if (historyError) {
     console.error("Failed to persist receipt history", historyError);
+  }
+
+  if (revision) {
+    const revisionEvent: HistoryEvent = {
+      id: randomUUID(),
+      receiptId: revision.previousReceiptId,
+      eventType: "revised",
+      actorType: "user",
+      actorLabel: "fix_playground",
+      note: `Original ${revision.previousDecision} -> Revised ${parsed.decision} after applying fix: ${revision.appliedFix}`,
+      payload: {
+        newReceiptId: receipt.receiptId,
+        previousDecision: revision.previousDecision,
+        newDecision: parsed.decision,
+        appliedFix: revision.appliedFix,
+        fromScenario: revision.previousScenario,
+        toScenario: receipt.scenario,
+      },
+      createdAt: receipt.timestamp,
+    };
+
+    const { error: revisionError } = await supabase.from("receipt_history").insert({
+      id: revisionEvent.id,
+      receipt_id: revisionEvent.receiptId,
+      event_type: revisionEvent.eventType,
+      actor_type: revisionEvent.actorType,
+      actor_label: revisionEvent.actorLabel,
+      note: revisionEvent.note,
+      payload: revisionEvent.payload,
+      created_at: revisionEvent.createdAt,
+    });
+
+    if (revisionError) {
+      console.error("Failed to persist revision link", revisionError);
+    }
   }
 }
 
@@ -825,6 +867,7 @@ async function buildFinalReceipt(
   parsed: AuditClassification,
   receiptId: string = randomUUID(),
   timestamp = new Date().toISOString(),
+  revision?: RevisionMetadata,
 ) {
   const hash = sha256(
     JSON.stringify({
@@ -835,8 +878,29 @@ async function buildFinalReceipt(
     }),
   );
 
-  const receipt = buildCaseFileReceipt(scenario, parsed, receiptId, hash, timestamp);
-  await persistReceipt(receipt, parsed);
+  const revisionHistory = revision
+    ? [
+        {
+          id: randomUUID(),
+          receiptId,
+          eventType: "revised" as const,
+          actorType: "user" as const,
+          actorLabel: "fix_playground",
+          note: `Revised from ${revision.previousDecision} after applying fix: ${revision.appliedFix}`,
+          payload: {
+            previousReceiptId: revision.previousReceiptId,
+            previousDecision: revision.previousDecision,
+            appliedFix: revision.appliedFix,
+            fromScenario: revision.previousScenario,
+            toScenario: scenario,
+          },
+          createdAt: timestamp,
+        },
+      ]
+    : [];
+
+  const receipt = buildCaseFileReceipt(scenario, parsed, receiptId, hash, timestamp, revisionHistory);
+  await persistReceipt(receipt, parsed, revision);
   return receipt;
 }
 
@@ -845,16 +909,20 @@ async function classifyWithRuleTrace(
   scenario: string,
   ruleTrace: AuditRule[],
   receiptId: string,
+  revision?: RevisionMetadata,
 ) {
   const parsed = await synthesizeCaseFile(client, scenario, ruleTrace);
-  return buildFinalReceipt(scenario, parsed, receiptId);
+  return buildFinalReceipt(scenario, parsed, receiptId, undefined, revision);
 }
 
-export async function classifyScenario(scenario: string): Promise<CaseFileReceipt> {
+export async function classifyScenario(
+  scenario: string,
+  options?: { revision?: RevisionMetadata },
+): Promise<CaseFileReceipt> {
   const client = getOpenAIClient();
 
   if (!client) {
-    return buildFinalReceipt(scenario, heuristicClassification(scenario));
+    return buildFinalReceipt(scenario, heuristicClassification(scenario), undefined, undefined, options?.revision);
   }
 
   const response = await client.responses.create({
@@ -878,11 +946,12 @@ export async function classifyScenario(scenario: string): Promise<CaseFileReceip
   });
 
   const parsed = auditClassificationSchema.parse(JSON.parse(response.output_text));
-  return buildFinalReceipt(scenario, parsed);
+  return buildFinalReceipt(scenario, parsed, undefined, undefined, options?.revision);
 }
 
 export async function* classifyScenarioStream(
   scenario: string,
+  options?: { revision?: RevisionMetadata },
 ): AsyncGenerator<ClassifyStreamEvent, void, void> {
   const receiptId = randomUUID();
   const startedAt = new Date().toISOString();
@@ -915,7 +984,7 @@ export async function* classifyScenarioStream(
 
     await sleep(260);
 
-    const receipt = await buildFinalReceipt(scenario, parsed, receiptId);
+    const receipt = await buildFinalReceipt(scenario, parsed, receiptId, undefined, options?.revision);
     yield {
       type: "analysis.completed",
       receipt,
@@ -941,7 +1010,7 @@ export async function* classifyScenarioStream(
   }
 
   await sleep(260);
-  const receipt = await classifyWithRuleTrace(client, scenario, ruleTrace, receiptId);
+  const receipt = await classifyWithRuleTrace(client, scenario, ruleTrace, receiptId, options?.revision);
   yield {
     type: "analysis.completed",
     receipt,

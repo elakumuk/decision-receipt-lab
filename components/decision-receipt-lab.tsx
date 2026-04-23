@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import type { CaseFileReceipt, HistoryEvent, RuleName } from "@/lib/schemas";
+import type { CaseFileReceipt, FixSuggestion, HistoryEvent, RevisionMetadata, RuleName } from "@/lib/schemas";
 
 type LegacyReceipt = {
   decision: "ADMISSIBLE" | "AMBIGUOUS" | "REFUSED";
@@ -36,6 +36,9 @@ type LegacyReceipt = {
 };
 
 type ReceiptResponse = Partial<CaseFileReceipt> & LegacyReceipt;
+type ReceiptWithSuggestions = ReceiptResponse & {
+  suggestedFixes?: FixSuggestion[];
+};
 
 type ContestResponse = {
   success: true;
@@ -47,6 +50,10 @@ type OverrideResponse = {
   overrideId: string;
   historyEventId: string;
   createdAt: string;
+};
+
+type SuggestFixResponse = {
+  suggestions: FixSuggestion[];
 };
 
 type StreamRuleState = {
@@ -236,7 +243,19 @@ function toTitle(value: string) {
     .join(" ");
 }
 
-function normalizeReceipt(receipt: ReceiptResponse | null) {
+function decisionRank(decision: "ADMISSIBLE" | "AMBIGUOUS" | "REFUSED") {
+  if (decision === "ADMISSIBLE") {
+    return 0;
+  }
+
+  if (decision === "AMBIGUOUS") {
+    return 1;
+  }
+
+  return 2;
+}
+
+function normalizeReceipt(receipt: ReceiptWithSuggestions | null) {
   if (!receipt) {
     return null;
   }
@@ -262,6 +281,7 @@ function normalizeReceipt(receipt: ReceiptResponse | null) {
     },
     history: receipt.history ?? [],
     challengeHistory: receipt.challengeHistory ?? [],
+    suggestedFixes: receipt.suggestedFixes ?? [],
   };
 }
 
@@ -445,10 +465,10 @@ export function DecisionReceiptLab({
   initialReceipt = null,
 }: {
   initialScenario?: string;
-  initialReceipt?: ReceiptResponse | null;
+  initialReceipt?: ReceiptWithSuggestions | null;
 }) {
   const [scenario, setScenario] = useState(initialScenario);
-  const [receipt, setReceipt] = useState<ReceiptResponse | null>(initialReceipt);
+  const [receipt, setReceipt] = useState<ReceiptWithSuggestions | null>(initialReceipt);
   const [streamState, setStreamState] = useState<StreamState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -463,6 +483,11 @@ export function DecisionReceiptLab({
     useState<(typeof overrideOptions)[number]["value"]>("annotate");
   const [overrideAnnotation, setOverrideAnnotation] = useState("");
   const [isOverriding, setIsOverriding] = useState(false);
+  const [showFixes, setShowFixes] = useState(false);
+  const [suggestions, setSuggestions] = useState<FixSuggestion[]>(initialReceipt?.suggestedFixes ?? []);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [suggestionError, setSuggestionError] = useState<string | null>(null);
+  const [decisionGlow, setDecisionGlow] = useState<"improved" | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -491,11 +516,21 @@ export function DecisionReceiptLab({
 
   const showWorkspace = Boolean(caseFile || streamState || isSubmitting);
 
-  async function handleSubmit() {
+  async function handleSubmit(options?: {
+    scenarioOverride?: string;
+    revision?: RevisionMetadata;
+    previousDecision?: "ADMISSIBLE" | "AMBIGUOUS" | "REFUSED";
+  }) {
+    const nextScenario = options?.scenarioOverride ?? scenario;
+
     setIsSubmitting(true);
     setError(null);
     setToastMessage(null);
+    setSuggestionError(null);
     setReceipt(null);
+    setSuggestions([]);
+    setShowFixes(false);
+    setDecisionGlow(null);
     setStreamState({
       rules: RULE_SEQUENCE.map((rule) => ({ rule, status: "pending" })),
     });
@@ -504,7 +539,10 @@ export function DecisionReceiptLab({
       const response = await fetch("/api/classify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenario }),
+        body: JSON.stringify({
+          scenario: nextScenario,
+          revision: options?.revision,
+        }),
       });
 
       if (!response.ok) {
@@ -587,6 +625,14 @@ export function DecisionReceiptLab({
 
           if (payload.type === "analysis.completed") {
             setReceipt(payload.receipt);
+            setScenario(payload.receipt.scenario);
+            if (
+              options?.previousDecision &&
+              decisionRank(payload.receipt.decision) < decisionRank(options.previousDecision)
+            ) {
+              setDecisionGlow("improved");
+              window.setTimeout(() => setDecisionGlow(null), 900);
+            }
             setStreamState(null);
             continue;
           }
@@ -602,6 +648,66 @@ export function DecisionReceiptLab({
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleSuggestFixes() {
+    if (!caseFile) {
+      return;
+    }
+
+    if (suggestions.length > 0 || caseFile.suggestedFixes.length > 0) {
+      setSuggestions(suggestions.length > 0 ? suggestions : caseFile.suggestedFixes);
+      setShowFixes(true);
+      return;
+    }
+
+    setIsSuggesting(true);
+    setSuggestionError(null);
+    setShowFixes(true);
+
+    try {
+      const response = await fetch("/api/suggest-fix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receipt: caseFile }),
+      });
+
+      const data = (await response.json()) as SuggestFixResponse & { error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Unable to suggest fixes right now.");
+      }
+
+      setSuggestions(data.suggestions);
+      setReceipt({
+        ...caseFile,
+        suggestedFixes: data.suggestions,
+      });
+    } catch (caughtError) {
+      setSuggestionError(
+        caughtError instanceof Error ? caughtError.message : "Unable to suggest fixes right now.",
+      );
+    } finally {
+      setIsSuggesting(false);
+    }
+  }
+
+  async function handleApplyFix(suggestion: FixSuggestion) {
+    if (!caseFile) {
+      return;
+    }
+
+    setScenario(suggestion.rewrittenAction);
+    await handleSubmit({
+      scenarioOverride: suggestion.rewrittenAction,
+      revision: {
+        previousReceiptId: caseFile.receiptId,
+        previousDecision: caseFile.decision,
+        previousScenario: caseFile.scenario,
+        appliedFix: suggestion.edit,
+      },
+      previousDecision: caseFile.decision,
+    });
   }
 
   async function handleContestSubmit() {
@@ -775,7 +881,7 @@ export function DecisionReceiptLab({
 
                 <button
                   type="button"
-                  onClick={handleSubmit}
+                  onClick={() => handleSubmit()}
                   disabled={isSubmitting || scenario.trim().length === 0}
                   className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-[22px] border border-white/10 bg-neutral-100 px-4 py-3.5 text-sm font-medium text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -831,7 +937,11 @@ export function DecisionReceiptLab({
                         </div>
                       ) : null}
 
-                      <div className={`rounded-[28px] border p-5 ${tone?.soft}`}>
+                      <div
+                        className={`rounded-[28px] border p-5 transition-shadow duration-500 ${
+                          tone?.soft
+                        } ${decisionGlow === "improved" ? "shadow-[0_0_36px_rgba(52,211,153,0.18)]" : ""}`}
+                      >
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div className="max-w-3xl">
                             <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">
@@ -865,7 +975,80 @@ export function DecisionReceiptLab({
                             </div>
                           </div>
                         </div>
+
+                        {caseFile.decision !== "ADMISSIBLE" ? (
+                          <div className="mt-5">
+                            <button
+                              type="button"
+                              onClick={handleSuggestFixes}
+                              disabled={isSuggesting}
+                              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-neutral-200 transition hover:border-white/18 hover:bg-white/[0.05] disabled:opacity-60"
+                            >
+                              {isSuggesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                              Suggest fixes
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
+
+                      {showFixes && caseFile.decision !== "ADMISSIBLE" ? (
+                        <div className="mt-5 rounded-[28px] border border-white/8 bg-black/20 p-5">
+                          <div className="flex items-center justify-between gap-4">
+                            <div>
+                              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">
+                                Fix this
+                              </p>
+                              <p className="mt-2 text-sm leading-6 text-neutral-400">
+                                Concrete changes that could move failing or warning rules toward PASS.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowFixes(false)}
+                              className="text-sm text-neutral-500 transition hover:text-neutral-200"
+                            >
+                              Hide
+                            </button>
+                          </div>
+
+                          {suggestionError ? (
+                            <p className="mt-4 text-sm text-red-300">{suggestionError}</p>
+                          ) : null}
+
+                          <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                            {(suggestions.length > 0 ? suggestions : caseFile.suggestedFixes ?? []).map((suggestion) => (
+                              <div
+                                key={`${suggestion.edit}-${suggestion.rewrittenAction}`}
+                                className="rounded-[24px] border border-white/8 bg-white/[0.02] p-4"
+                              >
+                                <p className="text-sm font-medium text-neutral-100">{suggestion.edit}</p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {suggestion.flips.map((flip) => (
+                                    <span
+                                      key={flip}
+                                      className="rounded-full border border-white/8 px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-400"
+                                    >
+                                      {flip}
+                                    </span>
+                                  ))}
+                                </div>
+                                <p className="mt-4 text-sm leading-6 text-neutral-400">
+                                  {suggestion.rewrittenAction}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyFix(suggestion)}
+                                  disabled={isSubmitting}
+                                  className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-100 transition hover:border-emerald-400/35 hover:bg-emerald-400/14 disabled:opacity-60"
+                                >
+                                  <ArrowRight className="h-4 w-4" />
+                                  Apply and re-audit
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
 
                       <div className="mt-5 grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
                         <div className="space-y-4">

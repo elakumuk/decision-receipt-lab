@@ -9,11 +9,25 @@ export const RULE_NAMES = [
   "CONSENT",
 ] as const;
 
+export const revisionMetadataSchema = z.object({
+  previousReceiptId: z.string().uuid("Previous receipt ID must be a valid UUID."),
+  previousDecision: z.enum(["ADMISSIBLE", "AMBIGUOUS", "REFUSED"]),
+  previousScenario: z
+    .string()
+    .min(1, "Previous scenario must be at least 1 character.")
+    .max(2000, "Previous scenario must be at most 2000 characters."),
+  appliedFix: z
+    .string()
+    .min(1, "Applied fix must be at least 1 character.")
+    .max(500, "Applied fix must be at most 500 characters."),
+});
+
 export const classifyScenarioSchema = z.object({
   scenario: z
     .string()
     .min(1, "Scenario must be at least 1 character.")
     .max(2000, "Scenario must be at most 2000 characters."),
+  revision: revisionMetadataSchema.optional(),
 });
 
 export const contestDecisionSchema = z.object({
@@ -124,6 +138,20 @@ export const caseFileReceiptSchema = auditClassificationSchema.extend({
   challengeHistory: z.array(historyEventSchema),
 });
 
+export const fixSuggestionSchema = z.object({
+  edit: z.string(),
+  flips: z.array(z.string()),
+  rewrittenAction: z.string(),
+});
+
+export const suggestFixRequestSchema = z.object({
+  receipt: caseFileReceiptSchema,
+});
+
+export const suggestFixResponseSchema = z.object({
+  suggestions: z.array(fixSuggestionSchema).min(2).max(4),
+});
+
 export const classifySessionStartedEventSchema = z.object({
   type: z.literal("session.started"),
   receiptId: z.string().uuid(),
@@ -165,9 +193,11 @@ export const classifyStreamEventSchema = z.discriminatedUnion("type", [
 
 export type RuleName = (typeof RULE_NAMES)[number];
 export type ClassifyScenarioInput = z.infer<typeof classifyScenarioSchema>;
+export type RevisionMetadata = z.infer<typeof revisionMetadataSchema>;
 export type ContestDecisionInput = z.infer<typeof contestDecisionSchema>;
 export type OverrideDecisionInput = z.infer<typeof overrideDecisionSchema>;
 export type AuditClassification = z.infer<typeof auditClassificationSchema>;
 export type HistoryEvent = z.infer<typeof historyEventSchema>;
 export type CaseFileReceipt = z.infer<typeof caseFileReceiptSchema>;
+export type FixSuggestion = z.infer<typeof fixSuggestionSchema>;
 export type ClassifyStreamEvent = z.infer<typeof classifyStreamEventSchema>;
