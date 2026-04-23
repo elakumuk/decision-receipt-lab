@@ -16,6 +16,12 @@ export const POLICY_PACK_IDS = [
   "finance",
 ] as const;
 
+export const WEBHOOK_EVENT_TYPES = [
+  "receipt.created",
+  "contest.created",
+  "override.created",
+] as const;
+
 export const revisionMetadataSchema = z.object({
   previousReceiptId: z.string().uuid("Previous receipt ID must be a valid UUID."),
   previousDecision: z.enum(["ADMISSIBLE", "AMBIGUOUS", "REFUSED"]),
@@ -163,6 +169,34 @@ export const verifyReceiptRequestSchema = z.object({
   signature: z.string().min(1, "Signature is required."),
 });
 
+export const similarCaseSchema = z.object({
+  id: z.string().uuid(),
+  decision: z.enum(["ADMISSIBLE", "AMBIGUOUS", "REFUSED"]),
+  summary: z.string(),
+  hash: z.string(),
+  timestamp: z.string(),
+  similarity: z.number().min(0).max(1),
+});
+
+export const webhookRegistrationSchema = z.object({
+  url: z.string().url("Webhook URL must be valid."),
+  events: z.array(z.enum(WEBHOOK_EVENT_TYPES)).min(1, "Select at least one event."),
+});
+
+export const webhookRecordSchema = z.object({
+  id: z.string().uuid(),
+  url: z.string().url(),
+  events: z.array(z.enum(WEBHOOK_EVENT_TYPES)),
+  createdAt: z.string(),
+  maskedSecret: z.string(),
+});
+
+export const webhookDeliveryPayloadSchema = z.object({
+  event: z.enum(WEBHOOK_EVENT_TYPES),
+  data: z.record(z.unknown()),
+  timestamp: z.string(),
+});
+
 export const suggestFixResponseSchema = z.object({
   suggestions: z.array(fixSuggestionSchema).min(2).max(4),
 });
@@ -208,6 +242,7 @@ export const classifyStreamEventSchema = z.discriminatedUnion("type", [
 
 export type RuleName = (typeof RULE_NAMES)[number];
 export type PolicyPackId = (typeof POLICY_PACK_IDS)[number];
+export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];
 export type ClassifyScenarioInput = z.infer<typeof classifyScenarioSchema>;
 export type RevisionMetadata = z.infer<typeof revisionMetadataSchema>;
 export type ContestDecisionInput = z.infer<typeof contestDecisionSchema>;
@@ -217,3 +252,7 @@ export type HistoryEvent = z.infer<typeof historyEventSchema>;
 export type CaseFileReceipt = z.infer<typeof caseFileReceiptSchema>;
 export type FixSuggestion = z.infer<typeof fixSuggestionSchema>;
 export type ClassifyStreamEvent = z.infer<typeof classifyStreamEventSchema>;
+export type SimilarCase = z.infer<typeof similarCaseSchema>;
+export type WebhookRegistrationInput = z.infer<typeof webhookRegistrationSchema>;
+export type WebhookRecord = z.infer<typeof webhookRecordSchema>;
+export type WebhookDeliveryPayload = z.infer<typeof webhookDeliveryPayloadSchema>;

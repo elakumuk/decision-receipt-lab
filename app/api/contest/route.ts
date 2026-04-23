@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { NextResponse } from "next/server";
 import { contestDecisionSchema } from "@/lib/schemas";
 import { getServerSupabaseClient } from "@/lib/supabase";
+import { triggerWebhookEvent } from "@/lib/webhooks";
 
 export async function POST(request: Request) {
   try {
@@ -49,6 +50,13 @@ export async function POST(request: Request) {
     if (historyError) {
       console.error("Failed to insert contest history", historyError);
     }
+
+    await triggerWebhookEvent("contest.created", {
+      contestId: data.id,
+      receiptId: input.receiptId,
+      category: input.category,
+      reason: input.reason,
+    });
 
     return NextResponse.json({
       success: true,

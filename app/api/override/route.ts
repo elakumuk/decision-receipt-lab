@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { NextResponse } from "next/server";
 import { overrideDecisionSchema } from "@/lib/schemas";
 import { getServerSupabaseClient } from "@/lib/supabase";
+import { triggerWebhookEvent } from "@/lib/webhooks";
 
 export async function POST(request: Request) {
   try {
@@ -56,6 +57,15 @@ export async function POST(request: Request) {
     if (historyError) {
       console.error("Failed to insert override history", historyError);
     }
+
+    await triggerWebhookEvent("override.created", {
+      overrideId: data.id,
+      receiptId: input.receiptId,
+      reviewerName: input.reviewerName,
+      overrideDecision: input.overrideDecision,
+      annotation: input.annotation,
+      createdAt,
+    });
 
     return NextResponse.json({
       success: true,
