@@ -24,7 +24,14 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import type { CaseFileReceipt, FixSuggestion, HistoryEvent, RevisionMetadata, RuleName } from "@/lib/schemas";
+import type {
+  CaseFileReceipt,
+  FixSuggestion,
+  HistoryEvent,
+  PolicyPackId,
+  RevisionMetadata,
+  RuleName,
+} from "@/lib/schemas";
 import { inputScenarioChips } from "@/lib/site-content";
 
 type LegacyReceipt = {
@@ -121,6 +128,13 @@ const overrideOptions = [
   { value: "reject", label: "Reject" },
   { value: "annotate", label: "Annotate" },
 ] as const;
+
+const policyPackOptions: Array<{ value: PolicyPackId; label: string }> = [
+  { value: "general", label: "General" },
+  { value: "customer_support", label: "Customer Support" },
+  { value: "healthcare", label: "Healthcare" },
+  { value: "finance", label: "Finance" },
+];
 
 function surfaceTone(decision: ReceiptResponse["decision"]) {
   if (decision === "ADMISSIBLE") {
@@ -259,6 +273,7 @@ function normalizeReceipt(receipt: ReceiptWithSuggestions | null) {
     whyOkay: receipt.whyOkay ?? [],
     whyFail: receipt.whyFail ?? [],
     missingInformation: receipt.missingInformation ?? [],
+    policyPack: receipt.policyPack ?? "general",
     receiptMetadata: receipt.receiptMetadata ?? {
       receiptId: receipt.receiptId,
       hash: receipt.hash,
@@ -318,12 +333,16 @@ function StatusCard({
 
 function InputComposer({
   scenario,
+  policyPack,
   onChange,
+  onPolicyPackChange,
   onSubmit,
   isSubmitting,
 }: {
   scenario: string;
+  policyPack: PolicyPackId;
   onChange: (value: string) => void;
+  onPolicyPackChange: (value: PolicyPackId) => void;
   onSubmit: () => void;
   isSubmitting: boolean;
 }) {
@@ -346,6 +365,22 @@ function InputComposer({
         placeholder="e.g., 'Support agent wants to refund $500 without manager approval after a complaint thread escalated.'"
         className="mt-7 w-full rounded-[28px] border border-white/10 bg-[#0b0b0d] px-5 py-5 text-sm leading-7 text-neutral-100 outline-none transition focus:border-amber-400/45 focus:ring-2 focus:ring-amber-400/15"
       />
+
+      <div className="mt-5">
+        <label className="block text-sm font-medium text-neutral-200">Policy pack</label>
+        <select
+          value={policyPack}
+          onChange={(event) => onPolicyPackChange(event.target.value as PolicyPackId)}
+          className="mt-2 w-full rounded-[20px] border border-white/10 bg-[#0b0b0d] px-4 py-3 text-sm text-neutral-100 outline-none transition focus:border-amber-400/45 focus:ring-2 focus:ring-amber-400/15"
+        >
+          {policyPackOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+          <option disabled>Custom pack — coming soon</option>
+        </select>
+      </div>
 
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         {exampleScenarios.map((example) => (
@@ -454,6 +489,7 @@ export function DecisionReceiptLab({
 }) {
   const [scenario, setScenario] = useState(initialScenario);
   const [receipt, setReceipt] = useState<ReceiptWithSuggestions | null>(initialReceipt);
+  const [policyPack, setPolicyPack] = useState<PolicyPackId>(initialReceipt?.policyPack ?? "general");
   const [streamState, setStreamState] = useState<StreamState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -526,6 +562,7 @@ export function DecisionReceiptLab({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           scenario: nextScenario,
+          policyPack,
           revision: options?.revision,
         }),
       });
@@ -818,7 +855,9 @@ export function DecisionReceiptLab({
           <motion.div key="empty-tool" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <InputComposer
               scenario={scenario}
+              policyPack={policyPack}
               onChange={setScenario}
+              onPolicyPackChange={setPolicyPack}
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
             />
@@ -850,6 +889,22 @@ export function DecisionReceiptLab({
                   placeholder="e.g., 'Support agent wants to refund $500 without manager approval.'"
                   className="mt-6 w-full rounded-[26px] border border-white/10 bg-[#0b0b0d] px-4 py-4 text-sm leading-7 text-neutral-100 outline-none transition focus:border-amber-400/45 focus:ring-2 focus:ring-amber-400/15"
                 />
+
+                <div className="mt-5">
+                  <label className="block text-sm font-medium text-neutral-200">Policy pack</label>
+                  <select
+                    value={policyPack}
+                    onChange={(event) => setPolicyPack(event.target.value as PolicyPackId)}
+                    className="mt-2 w-full rounded-[20px] border border-white/10 bg-[#0b0b0d] px-4 py-3 text-sm text-neutral-100 outline-none transition focus:border-amber-400/45 focus:ring-2 focus:ring-amber-400/15"
+                  >
+                    {policyPackOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                    <option disabled>Custom pack — coming soon</option>
+                  </select>
+                </div>
 
                 <div className="mt-5 flex flex-wrap gap-2">
                   {exampleScenarios.map((example) => (
@@ -935,6 +990,11 @@ export function DecisionReceiptLab({
                             <div className={`mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold tracking-[0.18em] ${tone?.badge}`}>
                               {decisionIcon(caseFile.decision)}
                               {caseFile.decision}
+                            </div>
+                            <div className="mt-3">
+                              <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-neutral-300">
+                                Audited under: {toTitle(caseFile.policyPack)}
+                              </span>
                             </div>
                             <p className="mt-5 text-base leading-8 text-neutral-200">{caseFile.summary}</p>
                           </div>

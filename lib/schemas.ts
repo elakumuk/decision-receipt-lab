@@ -9,6 +9,13 @@ export const RULE_NAMES = [
   "CONSENT",
 ] as const;
 
+export const POLICY_PACK_IDS = [
+  "general",
+  "customer_support",
+  "healthcare",
+  "finance",
+] as const;
+
 export const revisionMetadataSchema = z.object({
   previousReceiptId: z.string().uuid("Previous receipt ID must be a valid UUID."),
   previousDecision: z.enum(["ADMISSIBLE", "AMBIGUOUS", "REFUSED"]),
@@ -27,6 +34,7 @@ export const classifyScenarioSchema = z.object({
     .string()
     .min(1, "Scenario must be at least 1 character.")
     .max(2000, "Scenario must be at most 2000 characters."),
+  policyPack: z.enum(POLICY_PACK_IDS).optional(),
   revision: revisionMetadataSchema.optional(),
 });
 
@@ -126,6 +134,7 @@ export const historyEventSchema = z.object({
 
 export const caseFileReceiptSchema = auditClassificationSchema.extend({
   scenario: z.string(),
+  policyPack: z.enum(POLICY_PACK_IDS).optional(),
   receiptId: z.string().uuid(),
   hash: z.string(),
   timestamp: z.string(),
@@ -192,6 +201,7 @@ export const classifyStreamEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export type RuleName = (typeof RULE_NAMES)[number];
+export type PolicyPackId = (typeof POLICY_PACK_IDS)[number];
 export type ClassifyScenarioInput = z.infer<typeof classifyScenarioSchema>;
 export type RevisionMetadata = z.infer<typeof revisionMetadataSchema>;
 export type ContestDecisionInput = z.infer<typeof contestDecisionSchema>;

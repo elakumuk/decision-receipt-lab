@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
-import type { CaseFileReceipt, HistoryEvent } from "@/lib/schemas";
+import type { CaseFileReceipt, HistoryEvent, PolicyPackId } from "@/lib/schemas";
 
 type ReceiptRow = {
   id: string;
@@ -8,6 +8,7 @@ type ReceiptRow = {
   claimed_goal?: string | null;
   affected_parties?: CaseFileReceipt["affectedParties"] | null;
   authority_basis?: string | null;
+  policy_pack?: PolicyPackId | null;
   evidence_used?: CaseFileReceipt["evidenceUsed"] | null;
   evidence_missing?: CaseFileReceipt["evidenceMissing"] | null;
   decision: CaseFileReceipt["decision"];
@@ -86,6 +87,7 @@ export function mapReceiptRowToCaseFileReceipt(
     claimedGoal: row.claimed_goal ?? "Claimed goal not stored for this case.",
     affectedParties: row.affected_parties ?? [],
     authorityBasis: row.authority_basis ?? "Authority basis not stored for this case.",
+    policyPack: row.policy_pack ?? "general",
     evidenceUsed: row.evidence_used ?? [],
     evidenceMissing: row.evidence_missing ?? [],
     severity: row.severity ?? "medium",

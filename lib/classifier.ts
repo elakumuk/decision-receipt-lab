@@ -2,6 +2,8 @@ import { randomUUID } from "crypto";
 import type OpenAI from "openai";
 import { getOpenAIClient } from "@/lib/openai";
 import { sha256 } from "@/lib/hash";
+import { getPolicyPack } from "@/lib/policy-packs";
+import type { PolicyCheckResult } from "@/lib/policy-packs/types";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   RULE_NAMES,
@@ -11,6 +13,7 @@ import {
   type CaseFileReceipt,
   type ClassifyStreamEvent,
   type HistoryEvent,
+  type PolicyPackId,
   type RevisionMetadata,
   type RuleName,
 } from "@/lib/schemas";
@@ -284,6 +287,7 @@ const auditClassificationJsonSchema = {
 } as const;
 
 type AuditRule = AuditClassification["ruleTrace"][number];
+type PolicyAwareAuditRule = AuditRule & { reason: string };
 
 function buildCreatedHistoryEvent(receiptId: string, timestamp: string, parsed: AuditClassification): HistoryEvent {
   return {
@@ -331,12 +335,94 @@ function deriveDecision(ruleTrace: AuditRule[]): AuditClassification["decision"]
   return "ADMISSIBLE";
 }
 
+function verdictRank(verdict: AuditRule["verdict"]) {
+  if (verdict === "PASS") {
+    return 0;
+  }
+
+  if (verdict === "WARN") {
+    return 1;
+  }
+
+  return 2;
+}
+
+function mergePolicyCheck(rule: AuditRule, check: PolicyCheckResult) {
+  if (!check.hits) {
+    return rule;
+  }
+
+  const targetVerdict: AuditRule["verdict"] = check.effect === "fail" ? "FAIL" : "WARN";
+  const mergedVerdict =
+    verdictRank(targetVerdict) > verdictRank(rule.verdict) ? targetVerdict : rule.verdict;
+  const mergedReason = rule.reason.includes(check.reason)
+    ? rule.reason
+    : `${rule.reason} ${check.reason}`.trim();
+
+  return {
+    ...rule,
+    verdict: mergedVerdict,
+    reason: mergedReason,
+  };
+}
+
+function buildPolicyContext(policyPackId: PolicyPackId = "general") {
+  const pack = getPolicyPack(policyPackId);
+  const biasLines = Object.entries(pack.ruleBias)
+    .map(([rule, bias]) => `- ${rule}: ${bias}`)
+    .join("\n");
+  const guidanceLines = pack.guidance.map((item) => `- ${item}`).join("\n");
+
+  if (pack.id === "general") {
+    return "";
+  }
+
+  return `\nPolicy pack in effect: ${pack.label}\nDescription: ${pack.description}\nRule bias:\n${
+    biasLines || "- none"
+  }\nGuidance:\n${guidanceLines || "- none"}`;
+}
+
+function applyPolicyPackToRuleTrace(
+  scenario: string,
+  ruleTrace: AuditRule[],
+  policyPackId: PolicyPackId = "general",
+) {
+  const pack = getPolicyPack(policyPackId);
+
+  if (pack.id === "general" || pack.checks.length === 0) {
+    return ruleTrace;
+  }
+
+  const merged = [...ruleTrace];
+
+  for (const check of pack.checks) {
+    const result = check.evaluate(scenario);
+
+    if (!result.hits) {
+      continue;
+    }
+
+    for (const targetRule of check.appliesTo) {
+      const index = merged.findIndex((item) => item.rule === targetRule);
+
+      if (index === -1) {
+        continue;
+      }
+
+      merged[index] = mergePolicyCheck(merged[index], result);
+    }
+  }
+
+  return merged;
+}
+
 function buildCaseFileReceipt(
   scenario: string,
   parsed: AuditClassification,
   receiptId: string,
   hash: string,
   timestamp: string,
+  policyPack?: PolicyPackId,
   extraHistory: HistoryEvent[] = [],
 ): CaseFileReceipt {
   const createdEvent = buildCreatedHistoryEvent(receiptId, timestamp, parsed);
@@ -344,6 +430,7 @@ function buildCaseFileReceipt(
   return {
     ...parsed,
     scenario,
+    policyPack,
     receiptId,
     hash: hash.slice(0, 12),
     timestamp,
@@ -383,6 +470,7 @@ async function persistReceipt(
     claimed_goal: parsed.claimedGoal,
     affected_parties: parsed.affectedParties,
     authority_basis: parsed.authorityBasis,
+    policy_pack: receipt.policyPack ?? "general",
     evidence_used: parsed.evidenceUsed,
     evidence_missing: parsed.evidenceMissing,
     decision: parsed.decision,
@@ -507,10 +595,48 @@ async function evaluateRuleWithStreaming(client: OpenAI, scenario: string, rule:
   };
 }
 
+async function evaluateRuleWithPolicyContext(
+  client: OpenAI,
+  scenario: string,
+  rule: RuleName,
+  policyPackId: PolicyPackId = "general",
+) {
+  const stream = await client.chat.completions.create({
+    model: CLASSIFIER_MODEL,
+    stream: true,
+    temperature: 0.2,
+    messages: [
+      {
+        role: "system",
+        content: `${RULE_EVALUATOR_PROMPT}${buildPolicyContext(policyPackId)}`,
+      },
+      {
+        role: "user",
+        content: JSON.stringify({ scenario, rule, policyPack: policyPackId }),
+      },
+    ],
+  });
+
+  let content = "";
+
+  for await (const chunk of stream) {
+    content += chunk.choices[0]?.delta?.content ?? "";
+  }
+
+  const parsed = auditRuleSchema.omit({ rule: true }).parse(JSON.parse(extractJsonObject(content)));
+
+  return {
+    rule,
+    verdict: parsed.verdict,
+    reason: parsed.reason,
+  } satisfies AuditRule;
+}
+
 async function synthesizeCaseFile(
   client: OpenAI,
   scenario: string,
   ruleTrace: AuditRule[],
+  policyPackId: PolicyPackId = "general",
 ): Promise<AuditClassification> {
   const derivedDecision = deriveDecision(ruleTrace);
   const response = await client.responses.create({
@@ -518,7 +644,7 @@ async function synthesizeCaseFile(
     input: [
       {
         role: "system",
-        content: [{ type: "input_text", text: CASE_FILE_SYNTHESIS_PROMPT }],
+        content: [{ type: "input_text", text: `${CASE_FILE_SYNTHESIS_PROMPT}${buildPolicyContext(policyPackId)}` }],
       },
       {
         role: "user",
@@ -529,6 +655,7 @@ async function synthesizeCaseFile(
               scenario,
               decision: derivedDecision,
               ruleTrace,
+              policyPack: policyPackId,
             }),
           },
         ],
@@ -868,6 +995,7 @@ async function buildFinalReceipt(
   receiptId: string = randomUUID(),
   timestamp = new Date().toISOString(),
   revision?: RevisionMetadata,
+  policyPack: PolicyPackId = "general",
 ) {
   const hash = sha256(
     JSON.stringify({
@@ -899,7 +1027,15 @@ async function buildFinalReceipt(
       ]
     : [];
 
-  const receipt = buildCaseFileReceipt(scenario, parsed, receiptId, hash, timestamp, revisionHistory);
+  const receipt = buildCaseFileReceipt(
+    scenario,
+    parsed,
+    receiptId,
+    hash,
+    timestamp,
+    policyPack,
+    revisionHistory,
+  );
   await persistReceipt(receipt, parsed, revision);
   return receipt;
 }
@@ -910,51 +1046,53 @@ async function classifyWithRuleTrace(
   ruleTrace: AuditRule[],
   receiptId: string,
   revision?: RevisionMetadata,
+  policyPack: PolicyPackId = "general",
 ) {
-  const parsed = await synthesizeCaseFile(client, scenario, ruleTrace);
-  return buildFinalReceipt(scenario, parsed, receiptId, undefined, revision);
+  const mergedRuleTrace = applyPolicyPackToRuleTrace(scenario, ruleTrace, policyPack);
+  const parsed = await synthesizeCaseFile(client, scenario, mergedRuleTrace, policyPack);
+  return buildFinalReceipt(scenario, parsed, receiptId, undefined, revision, policyPack);
 }
 
 export async function classifyScenario(
   scenario: string,
-  options?: { revision?: RevisionMetadata },
+  options?: { revision?: RevisionMetadata; policyPack?: PolicyPackId },
 ): Promise<CaseFileReceipt> {
+  const policyPack = options?.policyPack ?? "general";
   const client = getOpenAIClient();
 
   if (!client) {
-    return buildFinalReceipt(scenario, heuristicClassification(scenario), undefined, undefined, options?.revision);
+    const heuristic = heuristicClassification(scenario);
+    const mergedRuleTrace = applyPolicyPackToRuleTrace(scenario, heuristic.ruleTrace, policyPack);
+    return buildFinalReceipt(
+      scenario,
+      {
+        ...heuristic,
+        decision: deriveDecision(mergedRuleTrace),
+        ruleTrace: mergedRuleTrace,
+      },
+      undefined,
+      undefined,
+      options?.revision,
+      policyPack,
+    );
   }
 
-  const response = await client.responses.create({
-    model: CLASSIFIER_MODEL,
-    input: [
-      {
-        role: "system",
-        content: [{ type: "input_text", text: AUDIT_CLASSIFIER_SYSTEM_PROMPT }],
-      },
-      {
-        role: "user",
-        content: [{ type: "input_text", text: JSON.stringify({ scenario }) }],
-      },
-    ],
-    text: {
-      format: {
-        type: "json_schema",
-        ...auditClassificationJsonSchema,
-      },
-    },
-  });
+  const ruleTrace: AuditRule[] = [];
 
-  const parsed = auditClassificationSchema.parse(JSON.parse(response.output_text));
-  return buildFinalReceipt(scenario, parsed, undefined, undefined, options?.revision);
+  for (const rule of RULE_NAMES) {
+    ruleTrace.push(await evaluateRuleWithPolicyContext(client, scenario, rule, policyPack));
+  }
+
+  return classifyWithRuleTrace(client, scenario, ruleTrace, randomUUID(), options?.revision, policyPack);
 }
 
 export async function* classifyScenarioStream(
   scenario: string,
-  options?: { revision?: RevisionMetadata },
+  options?: { revision?: RevisionMetadata; policyPack?: PolicyPackId },
 ): AsyncGenerator<ClassifyStreamEvent, void, void> {
   const receiptId = randomUUID();
   const startedAt = new Date().toISOString();
+  const policyPack = options?.policyPack ?? "general";
 
   yield {
     type: "session.started",
@@ -967,9 +1105,15 @@ export async function* classifyScenarioStream(
 
   if (!client) {
     const parsed = heuristicClassification(scenario);
+    const mergedRuleTrace = applyPolicyPackToRuleTrace(scenario, parsed.ruleTrace, policyPack);
+    const mergedParsed = {
+      ...parsed,
+      decision: deriveDecision(mergedRuleTrace),
+      ruleTrace: mergedRuleTrace,
+    };
 
     for (let index = 0; index < RULE_NAMES.length; index += 1) {
-      const ruleTraceItem = parsed.ruleTrace[index];
+      const ruleTraceItem = mergedParsed.ruleTrace[index];
 
       yield { type: "rule.started", rule: RULE_NAMES[index], index };
       await sleep(420);
@@ -984,7 +1128,14 @@ export async function* classifyScenarioStream(
 
     await sleep(260);
 
-    const receipt = await buildFinalReceipt(scenario, parsed, receiptId, undefined, options?.revision);
+    const receipt = await buildFinalReceipt(
+      scenario,
+      mergedParsed,
+      receiptId,
+      undefined,
+      options?.revision,
+      policyPack,
+    );
     yield {
       type: "analysis.completed",
       receipt,
@@ -998,7 +1149,7 @@ export async function* classifyScenarioStream(
     const rule = RULE_NAMES[index];
 
     yield { type: "rule.started", rule, index };
-    const result = await evaluateRuleWithStreaming(client, scenario, rule);
+    const result = await evaluateRuleWithPolicyContext(client, scenario, rule, policyPack);
     ruleTrace.push(result);
     yield {
       type: "rule.completed",
@@ -1010,7 +1161,14 @@ export async function* classifyScenarioStream(
   }
 
   await sleep(260);
-  const receipt = await classifyWithRuleTrace(client, scenario, ruleTrace, receiptId, options?.revision);
+  const receipt = await classifyWithRuleTrace(
+    client,
+    scenario,
+    ruleTrace,
+    receiptId,
+    options?.revision,
+    policyPack,
+  );
   yield {
     type: "analysis.completed",
     receipt,

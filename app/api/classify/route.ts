@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     const payload = await request.json();
-    const { scenario, revision } = classifyScenarioSchema.parse(payload);
+    const { scenario, revision, policyPack } = classifyScenarioSchema.parse(payload);
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         };
 
         try {
-          for await (const event of classifyScenarioStream(scenario, { revision })) {
+          for await (const event of classifyScenarioStream(scenario, { revision, policyPack })) {
             const parsedEvent = classifyStreamEventSchema.parse(event);
             sendEvent(parsedEvent.type, parsedEvent);
           }

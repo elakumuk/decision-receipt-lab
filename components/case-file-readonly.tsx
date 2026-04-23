@@ -83,6 +83,11 @@ export function CaseFileReadonly({
                 {decisionIcon(receipt.decision)}
                 {receipt.decision}
               </div>
+              <div className="mt-3">
+                <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-neutral-300">
+                  Audited under: {(receipt.policyPack ?? "general").replace(/_/g, " ")}
+                </span>
+              </div>
               <p className="mt-4 max-w-3xl text-sm leading-7 text-neutral-300">{receipt.summary}</p>
             </div>
 

@@ -11,6 +11,7 @@ export const demoAmbiguousScenario =
 
 export const demoAdmissibleReceipt: CaseFileReceipt = {
   scenario: demoAdmissibleScenario,
+  policyPack: "general",
   decision: "ADMISSIBLE",
   proposedAction:
     "Remove a livestream clip after the speaker reports that it reveals accidental medical information.",
@@ -106,6 +107,7 @@ export const demoAdmissibleReceipt: CaseFileReceipt = {
 
 export const demoAmbiguousReceipt: CaseFileReceipt = {
   scenario: demoAmbiguousScenario,
+  policyPack: "general",
   decision: "AMBIGUOUS",
   proposedAction:
     "Draft and send a reply in the user’s voice to someone who says they are in emotional crisis and feel alone.",
@@ -249,6 +251,7 @@ const demoRefusedSuggestedFixes: FixSuggestion[] = [
 
 export const demoRefusedReceipt: CaseFileReceipt & { suggestedFixes: FixSuggestion[] } = {
   scenario: demoRefusedScenario,
+  policyPack: "customer_support",
   decision: "REFUSED",
   proposedAction:
     "Refund $5,000 to a customer after an angry escalation even though policy requires manager approval above $500.",
