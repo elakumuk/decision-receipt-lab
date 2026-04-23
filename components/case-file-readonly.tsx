@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { AlertTriangle, ArrowRight, CheckCheck, CheckCircle2, Copy, ExternalLink, Fingerprint, Scale, ShieldAlert, XCircle } from "lucide-react";
-import type { CaseFileReceipt, HistoryEvent } from "@/lib/schemas";
+import { SimilarCasesSection } from "@/components/similar-cases-section";
+import type { CaseFileReceipt, HistoryEvent, SimilarCase } from "@/lib/schemas";
 
 function surfaceTone(decision: CaseFileReceipt["decision"]) {
   if (decision === "ADMISSIBLE") {
@@ -59,9 +60,11 @@ function eventLabel(event: HistoryEvent) {
 export function CaseFileReadonly({
   receipt,
   shared = false,
+  similarCases = [],
 }: {
   receipt: CaseFileReceipt;
   shared?: boolean;
+  similarCases?: SimilarCase[];
 }) {
   const [copied, setCopied] = useState<string | null>(null);
   const caseUrl = typeof window !== "undefined" ? `${window.location.origin}/case/${receipt.receiptId}` : "";
@@ -259,6 +262,8 @@ export function CaseFileReadonly({
               </div>
             </section>
           </div>
+
+          <SimilarCasesSection similarCases={similarCases} />
         </div>
       </div>
     </div>

@@ -22,8 +22,9 @@ import {
   UserRoundCheck,
   XCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { SimilarCasesSection } from "@/components/similar-cases-section";
 import type {
   CaseFileReceipt,
   FixSuggestion,
@@ -31,6 +32,7 @@ import type {
   PolicyPackId,
   RevisionMetadata,
   RuleName,
+  SimilarCase,
 } from "@/lib/schemas";
 import { inputScenarioChips } from "@/lib/site-content";
 
@@ -507,6 +509,8 @@ export function DecisionReceiptLab({
   const [isOverriding, setIsOverriding] = useState(false);
   const [showFixes, setShowFixes] = useState(false);
   const [suggestions, setSuggestions] = useState<FixSuggestion[]>(initialReceipt?.suggestedFixes ?? []);
+  const [similarCases, setSimilarCases] = useState<SimilarCase[]>([]);
+  const [isLoadingSimilar, setIsLoadingSimilar] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const [decisionGlow, setDecisionGlow] = useState<"improved" | null>(null);
@@ -537,6 +541,44 @@ export function DecisionReceiptLab({
     : "";
 
   const showWorkspace = Boolean(caseFile || streamState || isSubmitting);
+
+  useEffect(() => {
+    if (!caseFile?.receiptId) {
+      setSimilarCases([]);
+      return;
+    }
+
+    let isActive = true;
+    setIsLoadingSimilar(true);
+
+    fetch(`/api/similar/${caseFile.receiptId}`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load similar cases.");
+        }
+
+        return response.json() as Promise<{ similar: SimilarCase[] }>;
+      })
+      .then((data) => {
+        if (isActive) {
+          setSimilarCases(data.similar ?? []);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setSimilarCases([]);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingSimilar(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [caseFile?.receiptId]);
 
   async function handleSubmit(options?: {
     scenarioOverride?: string;
@@ -1446,6 +1488,17 @@ export function DecisionReceiptLab({
                     )}
                   </motion.section>
                 </div>
+
+                {caseFile ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.34, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                    className="mt-5"
+                  >
+                    <SimilarCasesSection similarCases={similarCases} isLoading={isLoadingSimilar} />
+                  </motion.div>
+                ) : null}
               </div>
             </div>
           </motion.div>

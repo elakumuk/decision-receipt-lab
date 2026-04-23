@@ -1,5 +1,11 @@
 import { getServerSupabaseClient } from "@/lib/supabase";
-import type { CaseFileReceipt, HistoryEvent, PolicyPackId } from "@/lib/schemas";
+import {
+  buildPrecedentText,
+  cosineSimilarity,
+  lexicalSimilarity,
+  parseStoredEmbedding,
+} from "@/lib/precedents";
+import type { CaseFileReceipt, HistoryEvent, PolicyPackId, SimilarCase } from "@/lib/schemas";
 
 type ReceiptRow = {
   id: string;
@@ -15,6 +21,7 @@ type ReceiptRow = {
   risk_score?: number | null;
   summary: string;
   signature?: string | null;
+  embedding?: number[] | string | null;
   reasoning_for?: string[] | null;
   reasoning_against?: string[] | null;
   missing_information?: CaseFileReceipt["missingInformation"] | null;
@@ -43,6 +50,16 @@ export type LedgerReceipt = {
   severity: CaseFileReceipt["severity"];
   summary: string;
 };
+
+function buildReceiptText(row: Pick<ReceiptRow, "scenario" | "decision" | "summary" | "rule_trace">) {
+  return buildPrecedentText({
+    scenario: row.scenario,
+    proposedAction: row.scenario,
+    decision: row.decision,
+    summary: row.summary,
+    ruleTrace: row.rule_trace,
+  });
+}
 
 function mapHistoryRows(rows: HistoryRow[] = []) {
   return rows.map(
@@ -181,4 +198,101 @@ export async function getLedgerPage(page: number, pageSize = 50) {
     totalPages: Math.ceil(totalCount / pageSize),
     page,
   };
+}
+
+export async function getSimilarReceipts(receiptId: string, limit = 3) {
+  const supabase = getServerSupabaseClient();
+
+  if (!supabase) {
+    return [] as SimilarCase[];
+  }
+
+  const targetSelect = "id, scenario, decision, summary, rule_trace, embedding, created_at";
+  const legacyTargetSelect = "id, scenario, decision, summary, rule_trace, created_at";
+
+  const { data: targetRowWithEmbedding, error: targetError } = await supabase
+    .from("receipts")
+    .select(targetSelect)
+    .eq("id", receiptId)
+    .maybeSingle<ReceiptRow>();
+
+  const targetMissingEmbedding =
+    targetError?.code === "42703" || targetError?.message?.includes("embedding");
+
+  const targetRow = targetMissingEmbedding
+    ? (
+        await supabase
+          .from("receipts")
+          .select(legacyTargetSelect)
+          .eq("id", receiptId)
+          .maybeSingle<ReceiptRow>()
+      ).data
+    : targetRowWithEmbedding;
+
+  if (targetError || !targetRow) {
+    if (!targetMissingEmbedding) {
+      return [] as SimilarCase[];
+    }
+  }
+
+  const candidateSelect = "id, scenario, decision, summary, rule_trace, hash, created_at, embedding";
+  const legacyCandidateSelect = "id, scenario, decision, summary, rule_trace, hash, created_at";
+
+  const { data: candidateRowsWithEmbedding, error: candidateError } = await supabase
+    .from("receipts")
+    .select(candidateSelect)
+    .neq("id", receiptId)
+    .order("created_at", { ascending: false })
+    .limit(500)
+    .returns<ReceiptRow[]>();
+
+  const candidateMissingEmbedding =
+    candidateError?.code === "42703" || candidateError?.message?.includes("embedding");
+
+  const candidateRows = candidateMissingEmbedding
+    ? (
+        await supabase
+          .from("receipts")
+          .select(legacyCandidateSelect)
+          .neq("id", receiptId)
+          .order("created_at", { ascending: false })
+          .limit(500)
+          .returns<ReceiptRow[]>()
+      ).data
+    : candidateRowsWithEmbedding;
+
+  if (candidateError || !candidateRows || candidateRows.length < 3) {
+    if (!candidateMissingEmbedding) {
+      return [] as SimilarCase[];
+    }
+  }
+
+  if (!targetRow || !candidateRows || candidateRows.length < 3) {
+    return [] as SimilarCase[];
+  }
+
+  const targetEmbedding = parseStoredEmbedding(targetRow.embedding);
+  const targetText = buildReceiptText(targetRow);
+
+  const ranked = candidateRows
+    .map((row) => {
+      const candidateEmbedding = parseStoredEmbedding(row.embedding);
+      const similarity =
+        targetEmbedding && candidateEmbedding
+          ? cosineSimilarity(targetEmbedding, candidateEmbedding)
+          : lexicalSimilarity(targetText, buildReceiptText(row));
+
+      return {
+        id: row.id,
+        decision: row.decision,
+        summary: row.summary,
+        hash: shortHash(row.hash),
+        timestamp: row.created_at ?? new Date(0).toISOString(),
+        similarity,
+      } satisfies SimilarCase;
+    })
+    .sort((left, right) => right.similarity - left.similarity)
+    .slice(0, limit);
+
+  return ranked;
 }

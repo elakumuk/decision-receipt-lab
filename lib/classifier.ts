@@ -1,11 +1,13 @@
 import { randomUUID } from "crypto";
 import type OpenAI from "openai";
 import { getOpenAIClient } from "@/lib/openai";
+import { generateReceiptEmbedding } from "@/lib/precedents";
 import { sha256 } from "@/lib/hash";
 import { getPolicyPack } from "@/lib/policy-packs";
 import type { PolicyCheckResult } from "@/lib/policy-packs/types";
 import { canonicalizeJson, signReceipt } from "@/lib/signing";
 import { getServerSupabaseClient } from "@/lib/supabase";
+import { triggerWebhookEvent } from "@/lib/webhooks";
 import {
   RULE_NAMES,
   auditClassificationSchema,
@@ -583,6 +585,56 @@ async function persistReceipt(
       console.error("Failed to persist revision link", revisionError);
     }
   }
+
+  await triggerWebhookEvent("receipt.created", {
+    receiptId: receipt.receiptId,
+    decision: receipt.decision,
+    policyPack: receipt.policyPack ?? "general",
+    summary: receipt.summary,
+    timestamp: receipt.timestamp,
+    receipt,
+  });
+}
+
+async function persistReceiptEmbedding(receipt: CaseFileReceipt) {
+  const supabase = getServerSupabaseClient();
+
+  if (!supabase) {
+    return;
+  }
+
+  try {
+    const embedding = await generateReceiptEmbedding(receipt);
+
+    if (!embedding) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("receipts")
+      .update({ embedding })
+      .eq("id", receipt.receiptId);
+
+    if (error) {
+      const missingEmbeddingColumn =
+        error.code === "PGRST204" ||
+        error.code === "42703" ||
+        error.message.includes("embedding");
+
+      if (missingEmbeddingColumn) {
+        console.warn("[precedents] skipping embedding persistence", {
+          receiptId: receipt.receiptId,
+          code: error.code,
+          message: error.message,
+        });
+        return;
+      }
+
+      console.error("Failed to persist receipt embedding", error);
+    }
+  } catch (error) {
+    console.error("Failed to generate receipt embedding", error);
+  }
 }
 
 async function evaluateRuleWithStreaming(client: OpenAI, scenario: string, rule: RuleName): Promise<AuditRule> {
@@ -1070,6 +1122,7 @@ async function buildFinalReceipt(
     hasSignature: Boolean(receipt.signature),
   });
   await persistReceipt(receipt, parsed, revision);
+  await persistReceiptEmbedding(receipt);
   return receipt;
 }
 
