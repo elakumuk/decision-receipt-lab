@@ -61,13 +61,13 @@ export default function DocsPage() {
                 <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-cyan-200">Get started</p>
                 <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-base font-medium text-neutral-100">npm install ovrule</p>
+                    <p className="text-base font-medium text-neutral-100">npm install ovrule-lab</p>
                     <p className="mt-2 text-sm leading-7 text-neutral-400">
                       Use the SDK when you want a typed client for classify, guard, and receipt verification.
                     </p>
                   </div>
                   <div className="min-w-[220px]">
-                    <DocsCodeBlock language="bash" code={`npm install ovrule`} />
+                    <DocsCodeBlock language="bash" code={`npm install ovrule-lab`} />
                   </div>
                 </div>
               </div>
@@ -88,15 +88,15 @@ export default function DocsPage() {
               <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">SDK</p>
               <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-neutral-50">TypeScript client</h2>
               <p className="mt-4 text-sm leading-8 text-neutral-400 sm:text-base">
-                The `ovrule` SDK wraps classify, guard, and verification flows with typed helpers so you can integrate the product without hand-rolling SSE parsing or receipt verification.
+                The `ovrule-lab` SDK wraps classify, guard, and verification flows with typed helpers so you can integrate the product without hand-rolling SSE parsing or receipt verification.
               </p>
               <div className="mt-6">
-                <DocsCodeBlock language="bash" code={`npm install ovrule`} />
+                <DocsCodeBlock language="bash" code={`npm install ovrule-lab`} />
               </div>
               <div className="mt-6 space-y-6">
                 <DocsCodeBlock
                   language="typescript"
-                  code={`import { classify } from "ovrule";
+                  code={`import { classify } from "ovrule-lab";
 
 const receipt = await classify(
   "Support agent wants to refund $5,000 without manager approval.",
@@ -107,7 +107,7 @@ console.log(receipt.decision, receipt.summary);`}
                 />
                 <DocsCodeBlock
                   language="typescript"
-                  code={`import { guard } from "ovrule";
+                  code={`import { guard } from "ovrule-lab";
 
 const result = await guard(
   {
@@ -125,7 +125,7 @@ await issueWireTransfer();`}
                 />
                 <DocsCodeBlock
                   language="typescript"
-                  code={`import { verify } from "ovrule";
+                  code={`import { verify } from "ovrule-lab";
 
 const valid = await verify(receipt, receipt.signature, {
   baseUrl: "https://decision-receipt-lab.vercel.app",

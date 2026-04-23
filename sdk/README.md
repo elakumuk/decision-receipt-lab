@@ -5,13 +5,13 @@ TypeScript client for Ovrule case-file classification, guardrails, and receipt v
 ## Install
 
 ```bash
-npm install ovrule
+npm install ovrule-lab
 ```
 
 ## 1. Simple classify
 
 ```ts
-import { classify } from "ovrule";
+import { classify } from "ovrule-lab";
 
 const receipt = await classify("Support agent wants to refund $5,000 without manager approval.");
 
@@ -22,7 +22,7 @@ console.log(receipt.summary);
 ## 2. `guard()` around an agent tool call
 
 ```ts
-import { guard } from "ovrule";
+import { guard } from "ovrule-lab";
 
 const result = await guard({
   scenario: "Finance agent wants to wire $18,000 to a new vendor after bank details changed.",
@@ -40,7 +40,7 @@ await issueWireTransfer();
 ## 3. LangChain middleware integration
 
 ```ts
-import { OvruleClient } from "ovrule";
+import { OvruleClient } from "ovrule-lab";
 
 const ovrule = new OvruleClient({ baseUrl: "https://your-ovrule-deployment.vercel.app" });
 

@@ -96,23 +96,23 @@ Supabase
 Install:
 
 ```bash
-npm install ovrule
+npm install ovrule-lab
 ```
 
 Examples:
 
 ```ts
-import { classify } from "ovrule";
+import { classify } from "ovrule-lab";
 const receipt = await classify("Support agent wants to refund $5,000 without manager approval.");
 ```
 
 ```ts
-import { guard } from "ovrule";
+import { guard } from "ovrule-lab";
 const result = await guard({ scenario: "Finance agent wants to wire $18,000 to a new vendor.", policyPack: "finance" });
 ```
 
 ```ts
-import { verify } from "ovrule";
+import { verify } from "ovrule-lab";
 const valid = await verify(receipt, receipt.signature);
 ```
 
