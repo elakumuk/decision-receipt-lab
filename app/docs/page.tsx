@@ -3,8 +3,10 @@ import { StickyHeader } from "@/components/sticky-header";
 
 const sections = [
   "Introduction",
+  "SDK",
   "Authentication",
   "Classify",
+  "Policy Packs",
   "Contest",
   "Override",
   "Verify",
@@ -81,10 +83,74 @@ export default function DocsPage() {
               </div>
             </section>
 
+            <section id="sdk">
+              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">SDK</p>
+              <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-neutral-50">TypeScript client</h2>
+              <p className="mt-4 text-sm leading-8 text-neutral-400 sm:text-base">
+                The `ovrule` SDK wraps classify, guard, and verification flows with typed helpers so you can integrate the product without hand-rolling SSE parsing or receipt verification.
+              </p>
+              <div className="mt-6">
+                <DocsCodeBlock language="bash" code={`npm install ovrule`} />
+              </div>
+              <div className="mt-6 space-y-6">
+                <DocsCodeBlock
+                  language="typescript"
+                  code={`import { classify } from "ovrule";
+
+const receipt = await classify(
+  "Support agent wants to refund $5,000 without manager approval.",
+  { baseUrl: "https://decision-receipt-lab.vercel.app" },
+);
+
+console.log(receipt.decision, receipt.summary);`}
+                />
+                <DocsCodeBlock
+                  language="typescript"
+                  code={`import { guard } from "ovrule";
+
+const result = await guard(
+  {
+    scenario: "Finance agent wants to wire $18,000 to a new vendor after bank details changed.",
+    policyPack: "finance",
+  },
+  { baseUrl: "https://decision-receipt-lab.vercel.app" },
+);
+
+if (!result.allowed) {
+  throw new Error(result.decision);
+}
+
+await issueWireTransfer();`}
+                />
+                <DocsCodeBlock
+                  language="typescript"
+                  code={`import { verify } from "ovrule";
+
+const valid = await verify(receipt, receipt.signature, {
+  baseUrl: "https://decision-receipt-lab.vercel.app",
+});
+
+console.log({ valid });`}
+                />
+              </div>
+              <p className="mt-6 text-sm leading-8 text-neutral-400 sm:text-base">
+                Full SDK examples live in the repo:
+                {" "}
+                <a
+                  href="https://github.com/elakumuk/decision-receipt-lab/blob/main/sdk/README.md"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-cyan-300 transition hover:text-cyan-200"
+                >
+                  sdk/README.md
+                </a>
+              </p>
+            </section>
+
             <section id="authentication">
               <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Authentication</p>
               <div className="mt-4 space-y-4 text-sm leading-8 text-neutral-400 sm:text-base">
-                <p>Currently open for demo use; API key auth coming with Phase 2.</p>
+                <p>Currently open for demo use with IP-based rate limiting. API key auth coming with Phase 2.</p>
                 <p>
                   In the current build, requests are accepted directly by the deployed Next.js app. Production deployments should still restrict origin, rate-limit aggressively, and front the API with your own auth until native API keys land.
                 </p>
@@ -100,7 +166,8 @@ export default function DocsPage() {
               <DocsCodeBlock
                 language="json"
                 code={`{
-  "scenario": "Support agent wants to refund $5,000 without manager approval."
+  "scenario": "Support agent wants to refund $5,000 without manager approval.",
+  "policyPack": "customer_support"
 }`}
               />
               <div className="mt-6 space-y-6">
@@ -140,6 +207,59 @@ const reader = response.body?.getReader();`}
               <div className="mt-6">
                 <DocsCodeBlock language="json" code={classifyExampleResponse} />
               </div>
+            </section>
+
+            <section id="policy-packs">
+              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Policy Packs</p>
+              <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-neutral-50">Audit overlays for domain-specific risk</h2>
+              <div className="mt-4 space-y-4 text-sm leading-8 text-neutral-400 sm:text-base">
+                <p>
+                  Policy packs modify the base six-rule audit with pack-specific guidance and deterministic post-LLM checks. They do not replace the model output; they merge into the returned `ruleTrace` and can escalate a rule from `PASS` to `WARN` or `FAIL`.
+                </p>
+                <p>
+                  Pass `policyPack` in the `/api/classify` request body to audit under a stricter domain-specific standard.
+                </p>
+              </div>
+              <div className="mt-6 space-y-4">
+                <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+                  <p className="text-sm font-medium text-neutral-100">General</p>
+                  <p className="mt-2 text-sm leading-7 text-neutral-400">
+                    Default Ovrule behavior. No extra domain checks are applied beyond the standard six-rule audit.
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+                  <p className="text-sm font-medium text-neutral-100">Customer Support</p>
+                  <p className="mt-2 text-sm leading-7 text-neutral-400">
+                    Tightens authorization and safety around refunds, escalation thresholds, sensitive customer interactions, and precedent-setting exceptions.
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+                  <p className="text-sm font-medium text-neutral-100">Healthcare</p>
+                  <p className="mt-2 text-sm leading-7 text-neutral-400">
+                    Tightens safety, causal validity, and consent around PHI, clinical advice boundaries, and emergency or acute-risk scenarios.
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+                  <p className="text-sm font-medium text-neutral-100">Finance</p>
+                  <p className="mt-2 text-sm leading-7 text-neutral-400">
+                    Tightens safety, authorization, and reversibility around transfers, trades, disclosure issues, and material financial actions.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6">
+                <DocsCodeBlock
+                  language="bash"
+                  code={`curl -N -X POST https://your-domain/api/classify \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "scenario": "Support agent wants to refund $5,000 without manager approval.",
+    "policyPack": "customer_support"
+  }'`}
+                />
+              </div>
+              <p className="mt-6 text-sm leading-8 text-neutral-400 sm:text-base">
+                Deterministic checks run after the LLM audit and can escalate verdicts before the final decision is derived. Custom pack support is planned next: `Custom pack — coming soon`.
+              </p>
             </section>
 
             <section id="contest">
@@ -208,7 +328,6 @@ const reader = response.body?.getReader();`}
             <section>
               <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Coming soon</p>
               <div className="mt-4 space-y-4 text-sm leading-8 text-neutral-400 sm:text-base">
-                <p>Policy packs: organization-specific rule overlays for internal governance.</p>
                 <p>Comparable precedents: retrieve similar prior case files to anchor reviewer decisions.</p>
                 <p>Webhooks: forward receipt and contest activity directly into your own systems.</p>
               </div>
