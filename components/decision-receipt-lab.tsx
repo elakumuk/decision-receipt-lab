@@ -1272,6 +1272,23 @@ export function DecisionReceiptLab({
                             <UserRoundCheck className="h-4 w-4" />
                             Reviewer override
                           </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopy(
+                                "share-case",
+                                `${window.location.origin}/case/${caseFile.receiptId}`,
+                              )
+                            }
+                            className="inline-flex items-center justify-center gap-2 rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-neutral-200 transition hover:border-white/18 hover:bg-white/[0.05]"
+                          >
+                            {copiedField === "share-case" ? (
+                              <CheckCheck className="h-4 w-4" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                            Share case
+                          </button>
                           <a
                             href={downloadHref}
                             download={`ovrule-case-file-${caseFile.hash}.json`}

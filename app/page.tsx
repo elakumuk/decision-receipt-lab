@@ -11,11 +11,13 @@ import { demoRefusedReceipt, demoRefusedScenario } from "@/lib/demo-data";
 type HomeProps = {
   searchParams?: {
     demo?: string;
+    scenario?: string;
   };
 };
 
 export default function Home({ searchParams }: HomeProps) {
   const isRefusedDemo = searchParams?.demo === "refused";
+  const prefilledScenario = searchParams?.scenario ?? "";
 
   return (
     <main className="min-h-screen bg-[#0a0a0b] text-neutral-100">
@@ -44,7 +46,7 @@ export default function Home({ searchParams }: HomeProps) {
 
           <div className="mt-10">
             <DecisionReceiptLab
-              initialScenario={isRefusedDemo ? demoRefusedScenario : ""}
+              initialScenario={isRefusedDemo ? demoRefusedScenario : prefilledScenario}
               initialReceipt={isRefusedDemo ? demoRefusedReceipt : null}
             />
           </div>
@@ -68,11 +70,14 @@ export default function Home({ searchParams }: HomeProps) {
           </div>
 
           <div className="grid gap-3 text-sm text-neutral-400 sm:grid-cols-2 sm:justify-items-end">
-            <Link href="/demo?state=refused" className="transition hover:text-neutral-100">
-              Live demo
+            <Link href="/ledger" className="transition hover:text-neutral-100">
+              Ledger
             </Link>
-            <Link href="#about" className="transition hover:text-neutral-100">
+            <Link href="/docs" className="transition hover:text-neutral-100">
               Docs
+            </Link>
+            <Link href="/demo?state=refused" className="transition hover:text-neutral-100">
+              Demo
             </Link>
             <a
               href="https://github.com/elakumuk/decision-receipt-lab"
@@ -82,9 +87,6 @@ export default function Home({ searchParams }: HomeProps) {
             >
               GitHub
             </a>
-            <Link href="#how-it-works" className="transition hover:text-neutral-100">
-              How it works
-            </Link>
             <span className="sm:col-span-2 sm:justify-self-end">Made by Ela Kumuk.</span>
           </div>
         </div>
