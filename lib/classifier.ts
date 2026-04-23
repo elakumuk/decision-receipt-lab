@@ -5,7 +5,7 @@ import { sha256 } from "@/lib/hash";
 import { getPolicyPack } from "@/lib/policy-packs";
 import type { PolicyCheckResult } from "@/lib/policy-packs/types";
 import { canonicalizeJson, signReceipt } from "@/lib/signing";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getServerSupabaseClient } from "@/lib/supabase";
 import {
   RULE_NAMES,
   auditClassificationSchema,
@@ -451,7 +451,7 @@ async function persistReceipt(
   parsed: AuditClassification,
   revision?: RevisionMetadata,
 ) {
-  const supabase = getSupabaseClient();
+  const supabase = getServerSupabaseClient();
 
   if (!supabase) {
     return;

@@ -1,13 +1,13 @@
 import { ZodError } from "zod";
 import { NextResponse } from "next/server";
 import { contestDecisionSchema } from "@/lib/schemas";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getServerSupabaseClient } from "@/lib/supabase";
 
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
     const input = contestDecisionSchema.parse(payload);
-    const supabase = getSupabaseClient();
+    const supabase = getServerSupabaseClient();
 
     if (!supabase) {
       return NextResponse.json(

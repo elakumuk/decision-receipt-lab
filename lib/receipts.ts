@@ -1,5 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
-import { env } from "@/lib/env";
+import { getServerSupabaseClient } from "@/lib/supabase";
 import type { CaseFileReceipt, HistoryEvent, PolicyPackId } from "@/lib/schemas";
 
 type ReceiptRow = {
@@ -44,16 +43,6 @@ export type LedgerReceipt = {
   severity: CaseFileReceipt["severity"];
   summary: string;
 };
-
-function getServerSupabaseClient() {
-  if (!env.supabaseUrl || !env.supabaseAnonKey) {
-    return null;
-  }
-
-  return createClient(env.supabaseUrl, env.supabaseAnonKey, {
-    auth: { persistSession: false },
-  });
-}
 
 function mapHistoryRows(rows: HistoryRow[] = []) {
   return rows.map(

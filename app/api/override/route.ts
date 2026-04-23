@@ -2,13 +2,13 @@ import { randomUUID } from "crypto";
 import { ZodError } from "zod";
 import { NextResponse } from "next/server";
 import { overrideDecisionSchema } from "@/lib/schemas";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getServerSupabaseClient } from "@/lib/supabase";
 
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
     const input = overrideDecisionSchema.parse(payload);
-    const supabase = getSupabaseClient();
+    const supabase = getServerSupabaseClient();
 
     if (!supabase) {
       return NextResponse.json(
