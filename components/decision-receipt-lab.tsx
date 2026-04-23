@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
+  ArrowRight,
   ArrowRightLeft,
   BadgeAlert,
   Check,
@@ -10,7 +11,6 @@ import {
   CheckCircle2,
   ClipboardList,
   Copy,
-  ExternalLink,
   FileWarning,
   Fingerprint,
   GitBranch,
@@ -25,8 +25,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { CaseFileReceipt, HistoryEvent } from "@/lib/schemas";
 import type { ReactNode } from "react";
+import type { CaseFileReceipt, HistoryEvent } from "@/lib/schemas";
 
 type LegacyReceipt = {
   decision: "ADMISSIBLE" | "AMBIGUOUS" | "REFUSED";
@@ -50,9 +50,6 @@ type OverrideResponse = {
   historyEventId: string;
   createdAt: string;
 };
-
-const githubUrl = "https://github.com/elakumuk/decision-receipt-lab";
-const liveUrl = "https://decision-receipt-lab.vercel.app";
 
 const exampleScenarios = [
   {
@@ -85,45 +82,27 @@ const overrideOptions = [
   { value: "annotate", label: "Annotate" },
 ] as const;
 
-const panelMotion = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] as const },
-};
-
-function SectionLabel({ index, title }: { index: string; title: string }) {
-  return (
-    <div className="mb-5 flex items-center gap-3">
-      <span className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">
-        {index}
-      </span>
-      <div className="h-px flex-1 bg-white/8" />
-      <span className="text-sm font-medium tracking-[-0.01em] text-neutral-200">{title}</span>
-    </div>
-  );
-}
-
 function surfaceTone(decision: ReceiptResponse["decision"]) {
   if (decision === "ADMISSIBLE") {
     return {
       badge: "border-emerald-400/35 bg-emerald-400/8 text-emerald-200",
-      lane: "bg-emerald-400",
       soft: "border-emerald-400/20 bg-emerald-400/8",
+      bar: "bg-emerald-400",
     };
   }
 
   if (decision === "AMBIGUOUS") {
     return {
       badge: "border-amber-400/35 bg-amber-400/8 text-amber-200",
-      lane: "bg-amber-400",
       soft: "border-amber-400/20 bg-amber-400/8",
+      bar: "bg-amber-400",
     };
   }
 
   return {
     badge: "border-red-400/35 bg-red-400/8 text-red-200",
-    lane: "bg-red-400",
     soft: "border-red-400/20 bg-red-400/8",
+    bar: "bg-red-400",
   };
 }
 
@@ -212,72 +191,6 @@ function toTitle(value: string) {
     .join(" ");
 }
 
-function ReceiptRow({
-  label,
-  value,
-  copied,
-  onCopy,
-}: {
-  label: string;
-  value: string;
-  copied: boolean;
-  onCopy: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onCopy}
-      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-left transition hover:border-white/14 hover:bg-white/[0.03]"
-    >
-      <div className="min-w-0">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">{label}</p>
-        <p className="mt-1 break-all font-mono text-sm text-neutral-200">{value}</p>
-      </div>
-      <div className="shrink-0 rounded-full border border-white/8 p-2 text-neutral-400 transition group-hover:text-neutral-200">
-        {copied ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      </div>
-    </button>
-  );
-}
-
-function EmptyState({
-  icon,
-  title,
-  body,
-}: {
-  icon: ReactNode;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="flex h-full min-h-[24rem] flex-col items-center justify-center rounded-[28px] border border-dashed border-white/8 bg-white/[0.02] px-8 text-center">
-      <div className="rounded-full border border-white/8 bg-white/[0.03] p-3 text-neutral-300">{icon}</div>
-      <p className="mt-4 text-sm font-medium text-neutral-200">{title}</p>
-      <p className="mt-2 max-w-sm text-sm leading-6 text-neutral-500">{body}</p>
-    </div>
-  );
-}
-
-function LoadingSkeleton({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className={`space-y-4 ${compact ? "pt-2" : "pt-4"}`}>
-      <div className="h-4 w-24 animate-pulse rounded-full bg-white/[0.05]" />
-      <div className="h-12 w-40 animate-pulse rounded-full bg-white/[0.06]" />
-      <div className="h-5 w-full animate-pulse rounded-full bg-white/[0.04]" />
-      <div className="h-5 w-4/5 animate-pulse rounded-full bg-white/[0.04]" />
-      <div className="space-y-3 pt-4">
-        {[0, 1, 2].map((key) => (
-          <div key={key} className="rounded-2xl border border-white/6 bg-white/[0.02] p-4">
-            <div className="h-4 w-36 animate-pulse rounded-full bg-white/[0.05]" />
-            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/[0.04]" />
-            <div className="mt-2 h-4 w-3/4 animate-pulse rounded-full bg-white/[0.04]" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function normalizeReceipt(receipt: ReceiptResponse | null) {
   if (!receipt) {
     return null;
@@ -307,14 +220,135 @@ function normalizeReceipt(receipt: ReceiptResponse | null) {
   };
 }
 
+function ReceiptRow({
+  label,
+  value,
+  copied,
+  onCopy,
+}: {
+  label: string;
+  value: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-left transition hover:border-white/14 hover:bg-white/[0.03]"
+    >
+      <div className="min-w-0">
+        <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">{label}</p>
+        <p className="mt-1 break-all font-mono text-sm text-neutral-200">{value}</p>
+      </div>
+      <div className="shrink-0 rounded-full border border-white/8 p-2 text-neutral-400 transition group-hover:text-neutral-200">
+        {copied ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      </div>
+    </button>
+  );
+}
+
+function StatusCard({
+  icon,
+  title,
+  body,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-[32px] border border-dashed border-white/8 bg-white/[0.02] px-8 py-14 text-center">
+      <div className="rounded-full border border-white/10 bg-white/[0.03] p-3 text-neutral-300">{icon}</div>
+      <p className="mt-4 text-base font-medium text-neutral-100">{title}</p>
+      <p className="mt-2 max-w-md text-sm leading-7 text-neutral-500">{body}</p>
+    </div>
+  );
+}
+
+function LoadingBlock() {
+  return (
+    <div className="space-y-4">
+      <div className="h-4 w-28 animate-pulse rounded-full bg-white/[0.05]" />
+      <div className="h-14 w-52 animate-pulse rounded-full bg-white/[0.06]" />
+      <div className="h-5 w-full animate-pulse rounded-full bg-white/[0.04]" />
+      <div className="h-5 w-3/4 animate-pulse rounded-full bg-white/[0.04]" />
+      <div className="grid gap-3 md:grid-cols-2">
+        {[0, 1].map((key) => (
+          <div key={key} className="rounded-[24px] border border-white/6 bg-white/[0.02] p-4">
+            <div className="h-4 w-28 animate-pulse rounded-full bg-white/[0.05]" />
+            <div className="mt-3 h-4 w-full animate-pulse rounded-full bg-white/[0.04]" />
+            <div className="mt-2 h-4 w-3/4 animate-pulse rounded-full bg-white/[0.04]" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InputComposer({
+  scenario,
+  onChange,
+  onSubmit,
+  isSubmitting,
+}: {
+  scenario: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-3xl rounded-[36px] border border-white/8 bg-white/[0.03] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-8">
+      <div className="text-center">
+        <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Start a case</p>
+        <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-neutral-50 sm:text-[2.4rem]">
+          What is the agent about to do?
+        </h2>
+        <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-neutral-400 sm:text-base">
+          Describe the proposed action, the claimed goal, and any permission or policy basis you already know.
+        </p>
+      </div>
+
+      <textarea
+        rows={8}
+        value={scenario}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="e.g., 'Support agent wants to refund $500 without manager approval after a complaint thread escalated.'"
+        className="mt-7 w-full rounded-[28px] border border-white/10 bg-[#0b0b0d] px-5 py-5 text-sm leading-7 text-neutral-100 outline-none transition focus:border-amber-400/45 focus:ring-2 focus:ring-amber-400/15"
+      />
+
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        {exampleScenarios.map((example) => (
+          <button
+            key={example.label}
+            type="button"
+            onClick={() => onChange(example.value)}
+            className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-300 transition hover:border-white/18 hover:bg-white/[0.05] hover:text-neutral-100"
+          >
+            {example.label}
+          </button>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={isSubmitting || scenario.trim().length === 0}
+        className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-[24px] border border-white/10 bg-neutral-100 px-4 py-4 text-sm font-medium text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
+        {isSubmitting ? "Classifying…" : "Request case file"}
+      </button>
+    </div>
+  );
+}
+
 export function DecisionReceiptLab({
   initialScenario = "",
   initialReceipt = null,
-  showChrome = true,
 }: {
   initialScenario?: string;
   initialReceipt?: ReceiptResponse | null;
-  showChrome?: boolean;
 }) {
   const [scenario, setScenario] = useState(initialScenario);
   const [receipt, setReceipt] = useState<ReceiptResponse | null>(initialReceipt);
@@ -500,492 +534,414 @@ export function DecisionReceiptLab({
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#0a0a0b] text-neutral-100">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.055),transparent_28%),radial-gradient(circle_at_85%_0%,rgba(255,255,255,0.03),transparent_20%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.03),transparent_24%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.025] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:22px_22px]" />
-
-      <div className="relative mx-auto flex min-h-screen w-full max-w-[1680px] flex-col px-4 py-5 sm:px-6 lg:px-8">
-        {showChrome ? (
-          <header className="mb-6 flex flex-col gap-4 border-b border-white/8 pb-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-[18px] font-semibold tracking-[-0.03em] text-neutral-50">Ovrule</p>
-              <p className="mt-1 text-sm text-neutral-500">Auditable case files for AI agent decisions</p>
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <a
-                href={githubUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-neutral-300 transition hover:border-white/20 hover:text-neutral-100"
-              >
-                GitHub
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-              <div className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-neutral-400">
-                Built with OpenAI Codex
-              </div>
-            </div>
-          </header>
-        ) : null}
-
-        <div className="grid flex-1 gap-4 xl:grid-cols-[1.08fr_1.15fr_1fr_0.94fr]">
-          <motion.section
-            {...panelMotion}
-            className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]"
-          >
-            <SectionLabel index="01" title="Propose an action" />
-            <div>
-              <label className="text-sm font-medium text-neutral-100">Scenario input</label>
-              <p className="mt-2 text-sm leading-6 text-neutral-500">
-                Describe the proposed AI action, the intended outcome, and any stated permission or policy basis.
-              </p>
-            </div>
-
-            <textarea
-              rows={11}
-              value={scenario}
-              onChange={(event) => setScenario(event.target.value)}
-              placeholder="Example: Agent wants to send a promotional email to all customers in California using last quarter's list, including users whose consent status is unclear."
-              className="mt-4 w-full rounded-[24px] border border-white/10 bg-[#0b0b0d] px-4 py-4 text-sm leading-6 text-neutral-100 outline-none transition focus:border-amber-400/45 focus:ring-2 focus:ring-amber-400/15"
+    <section id="tool" className="relative">
+      <AnimatePresence mode="wait">
+        {!caseFile && !isSubmitting ? (
+          <motion.div key="empty-tool" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <InputComposer
+              scenario={scenario}
+              onChange={setScenario}
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
             />
+            <div className="mx-auto mt-5 max-w-2xl text-center text-sm leading-7 text-neutral-500">
+              No case yet. Describe an agent action to start one.
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div key={caseFile?.receiptId ?? "loading"} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div className="grid gap-5 xl:grid-cols-[0.78fr_1.22fr]">
+              <motion.aside
+                initial={{ opacity: 0, y: 22 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+                className="rounded-[32px] border border-white/8 bg-white/[0.03] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)]"
+              >
+                <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Case intake</p>
+                <h3 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-neutral-50">
+                  What is the agent about to do?
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-neutral-400">
+                  Rewrite the scenario or run a second case without leaving the current file.
+                </p>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              {exampleScenarios.map((example) => (
+                <textarea
+                  rows={9}
+                  value={scenario}
+                  onChange={(event) => setScenario(event.target.value)}
+                  placeholder="e.g., 'Support agent wants to refund $500 without manager approval.'"
+                  className="mt-6 w-full rounded-[26px] border border-white/10 bg-[#0b0b0d] px-4 py-4 text-sm leading-7 text-neutral-100 outline-none transition focus:border-amber-400/45 focus:ring-2 focus:ring-amber-400/15"
+                />
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {exampleScenarios.map((example) => (
+                    <button
+                      key={example.label}
+                      type="button"
+                      onClick={() => setScenario(example.value)}
+                      className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-300 transition hover:border-white/18 hover:bg-white/[0.05] hover:text-neutral-100"
+                    >
+                      {example.label}
+                    </button>
+                  ))}
+                </div>
+
                 <button
-                  key={example.label}
                   type="button"
-                  onClick={() => setScenario(example.value)}
-                  className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-xs text-neutral-300 transition hover:border-white/18 hover:bg-white/[0.05] hover:text-neutral-100"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || scenario.trim().length === 0}
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-[22px] border border-white/10 bg-neutral-100 px-4 py-3.5 text-sm font-medium text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {example.label}
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
+                  {isSubmitting ? "Classifying…" : "Run this case"}
                 </button>
-              ))}
-            </div>
 
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting || scenario.trim().length === 0}
-              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-[22px] border border-white/10 bg-neutral-100 px-4 py-3.5 text-sm font-medium text-neutral-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Stamp className="h-4 w-4" />}
-              {isSubmitting ? "Classifying…" : "Request case file"}
-            </button>
+                {caseFile ? (
+                  <div className="mt-6 rounded-[24px] border border-white/8 bg-black/20 p-4">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">Case framing</p>
+                    <div className="mt-3 space-y-3 text-sm leading-6 text-neutral-400">
+                      <p>
+                        <span className="text-neutral-200">Claimed goal:</span> {caseFile.claimedGoal}
+                      </p>
+                      <p>
+                        <span className="text-neutral-200">Authority basis:</span> {caseFile.authorityBasis}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </motion.aside>
 
-            <div className="mt-6 rounded-[24px] border border-white/8 bg-black/20 p-4">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-neutral-500">Current framing</p>
-              <div className="mt-3 space-y-3 text-sm leading-6 text-neutral-400">
-                <p>
-                  <span className="text-neutral-200">Claimed goal:</span>{" "}
-                  {caseFile?.claimedGoal ?? "Will be extracted after classification."}
-                </p>
-                <p>
-                  <span className="text-neutral-200">Authority basis:</span>{" "}
-                  {caseFile?.authorityBasis ?? "Will be assessed from the submitted scenario."}
-                </p>
-              </div>
-            </div>
-          </motion.section>
-
-          <motion.section
-            {...panelMotion}
-            transition={{ ...panelMotion.transition, delay: 0.04 }}
-            className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]"
-          >
-            <SectionLabel index="02" title="Decision" />
-
-            <AnimatePresence mode="wait">
-              {isSubmitting ? (
-                <motion.div key="decision-loading" {...panelMotion}>
-                  <LoadingSkeleton />
-                </motion.div>
-              ) : caseFile ? (
-                <motion.div
-                  key={caseFile.receiptId}
-                  initial={{ opacity: 0, y: 18 }}
+              <div className="space-y-5">
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-                  className="space-y-5"
+                  transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }}
+                  className="relative overflow-hidden rounded-[34px] border border-white/8 bg-white/[0.03] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.38)] sm:p-7"
                 >
-                  <div className={`rounded-[28px] border p-5 ${tone?.soft}`}>
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <div className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold tracking-[0.18em] ${tone?.badge}`}>
-                          {decisionIcon(caseFile.decision)}
-                          {caseFile.decision}
+                  {isSubmitting || !caseFile ? (
+                    <LoadingBlock />
+                  ) : (
+                    <>
+                      {caseFile.decision === "REFUSED" ? (
+                        <div className="pointer-events-none absolute right-6 top-8 rotate-[-12deg] rounded-full border border-red-400/35 bg-red-400/10 px-5 py-2 font-mono text-xs uppercase tracking-[0.42em] text-red-300 shadow-[0_0_40px_rgba(248,113,113,0.08)]">
+                          Refused
                         </div>
-                        <p className="mt-4 max-w-2xl text-sm leading-7 text-neutral-200">{caseFile.summary}</p>
-                      </div>
+                      ) : null}
 
-                      <div className="min-w-[168px] rounded-[22px] border border-white/8 bg-black/20 p-4">
-                        <p className="text-[11px] uppercase tracking-[0.22em] text-neutral-500">Risk score</p>
-                        <div className="mt-2 flex items-end gap-3">
-                          <span className="text-3xl font-semibold tracking-[-0.03em] text-neutral-50">
-                            {caseFile.riskScore}
-                          </span>
-                          <span className="mb-1 text-sm text-neutral-500">/100</span>
-                        </div>
-                        <div className="mt-4 h-2 rounded-full bg-white/[0.05]">
-                          <div
-                            className={`h-2 rounded-full ${severityTone(caseFile.severity)}`}
-                            style={{ width: `${caseFile.riskScore}%` }}
-                          />
-                        </div>
-                        <div className="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.18em] text-neutral-500">
-                          <span>Low</span>
-                          <span className="text-neutral-300">{caseFile.severity}</span>
-                          <span>High</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
-                      <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
-                        <Check className="h-4 w-4 text-emerald-300" />
-                        Why this might be okay
-                      </div>
-                      <ul className="mt-3 space-y-2 text-sm leading-6 text-neutral-400">
-                        {caseFile.whyOkay.length > 0 ? (
-                          caseFile.whyOkay.map((item) => <li key={item}>{item}</li>)
-                        ) : (
-                          <li>No affirmative basis was returned.</li>
-                        )}
-                      </ul>
-                    </div>
-
-                    <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
-                      <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
-                        <Siren className="h-4 w-4 text-red-300" />
-                        Why this might fail
-                      </div>
-                      <ul className="mt-3 space-y-2 text-sm leading-6 text-neutral-400">
-                        {caseFile.whyFail.length > 0 ? (
-                          caseFile.whyFail.map((item) => <li key={item}>{item}</li>)
-                        ) : (
-                          <li>No negative basis was returned.</li>
-                        )}
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {caseFile.ruleTrace.map((item) => (
-                      <div
-                        key={item.rule}
-                        className="rounded-[22px] border border-white/8 bg-black/20 p-4"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5">{ruleIcon(item.verdict)}</div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-medium text-neutral-100">{item.rule}</p>
-                              <span
-                                className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] ${ruleTone(item.verdict)}`}
-                              >
-                                {item.verdict}
-                              </span>
+                      <div className={`rounded-[28px] border p-5 ${tone?.soft}`}>
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div className="max-w-3xl">
+                            <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">
+                              Case verdict
+                            </p>
+                            <div className={`mt-3 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold tracking-[0.18em] ${tone?.badge}`}>
+                              {decisionIcon(caseFile.decision)}
+                              {caseFile.decision}
                             </div>
-                            <p className="mt-2 text-sm leading-6 text-neutral-400">{item.reason}</p>
+                            <p className="mt-5 text-base leading-8 text-neutral-200">{caseFile.summary}</p>
+                          </div>
+
+                          <div className="min-w-[188px] rounded-[22px] border border-white/8 bg-black/20 p-4">
+                            <p className="text-[11px] uppercase tracking-[0.22em] text-neutral-500">Risk score</p>
+                            <div className="mt-2 flex items-end gap-3">
+                              <span className="text-4xl font-semibold tracking-[-0.05em] text-neutral-50">
+                                {caseFile.riskScore}
+                              </span>
+                              <span className="mb-1 text-sm text-neutral-500">/100</span>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/[0.05]">
+                              <div
+                                className={`h-2 rounded-full ${severityTone(caseFile.severity)}`}
+                                style={{ width: `${caseFile.riskScore}%` }}
+                              />
+                            </div>
+                            <div className="mt-3 flex items-center justify-between text-xs uppercase tracking-[0.18em] text-neutral-500">
+                              <span>Low</span>
+                              <span className="text-neutral-300">{caseFile.severity}</span>
+                              <span>High</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div key="decision-empty" {...panelMotion}>
-                  <EmptyState
-                    icon={<Scale className="h-5 w-5" />}
-                    title="Decision appears here"
-                    body="The case file will show the verdict, risk score, rule trace, and competing reasoning once the action is classified."
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.section>
 
-          <motion.section
-            {...panelMotion}
-            transition={{ ...panelMotion.transition, delay: 0.08 }}
-            className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]"
-          >
-            <SectionLabel index="03" title="Evidence" />
-
-            <AnimatePresence mode="wait">
-              {isSubmitting ? (
-                <motion.div key="evidence-loading" {...panelMotion}>
-                  <LoadingSkeleton compact />
-                </motion.div>
-              ) : caseFile ? (
-                <motion.div
-                  key={`evidence-${caseFile.receiptId}`}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-                  className="space-y-5"
-                >
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
-                      <Waypoints className="h-4 w-4 text-neutral-300" />
-                      Proposed action
-                    </div>
-                    <p className="mt-3 text-sm leading-7 text-neutral-300">{caseFile.proposedAction}</p>
-                  </div>
-
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
-                      <Users className="h-4 w-4 text-neutral-300" />
-                      Affected parties
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {caseFile.affectedParties.length > 0 ? (
-                        caseFile.affectedParties.map((party) => (
-                          <div
-                            key={`${party.label}-${party.type}`}
-                            className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-2 text-xs text-neutral-300"
-                          >
-                            {party.label} · {party.type} · {party.impact}
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-neutral-500">No affected parties were extracted.</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                      Evidence used
-                    </div>
-                    <div className="mt-3 space-y-3">
-                      {caseFile.evidenceUsed.length > 0 ? (
-                        caseFile.evidenceUsed.map((item) => (
-                          <div key={`${item.label}-${item.summary}`} className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="text-sm font-medium text-neutral-200">{item.label}</p>
-                              <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">
-                                {toTitle(item.kind)}
-                              </span>
+                      <div className="mt-5 grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+                        <div className="space-y-4">
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
+                              <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
+                                <Check className="h-4 w-4 text-emerald-300" />
+                                Why this might be okay
+                              </div>
+                              <ul className="mt-3 space-y-2 text-sm leading-6 text-neutral-400">
+                                {caseFile.whyOkay.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
                             </div>
-                            <p className="mt-2 text-sm leading-6 text-neutral-400">{item.summary}</p>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-neutral-500">No explicit evidence items were returned.</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
-                      <FileWarning className="h-4 w-4 text-amber-300" />
-                      Missing information
-                    </div>
-                    <div className="mt-3 space-y-3">
-                      {caseFile.missingInformation.length > 0 ? (
-                        caseFile.missingInformation.map((item) => (
-                          <div key={`${item.field}-${item.couldFlip}`} className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-medium text-neutral-200">{item.field}</p>
-                              <span className="rounded-full border border-white/8 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
-                                Could flip {item.couldFlip}
-                              </span>
+                            <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
+                              <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
+                                <Siren className="h-4 w-4 text-red-300" />
+                                Why this might fail
+                              </div>
+                              <ul className="mt-3 space-y-2 text-sm leading-6 text-neutral-400">
+                                {caseFile.whyFail.map((item) => (
+                                  <li key={item}>{item}</li>
+                                ))}
+                              </ul>
                             </div>
-                            <p className="mt-2 text-sm leading-6 text-neutral-400">{item.whyItMatters}</p>
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-neutral-500">No missing information items were flagged.</p>
-                      )}
-                    </div>
-                  </div>
 
-                  <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
-                      <BadgeAlert className="h-4 w-4 text-amber-300" />
-                      Evidence still missing
-                    </div>
-                    <div className="mt-3 space-y-3">
-                      {caseFile.evidenceMissing.length > 0 ? (
-                        caseFile.evidenceMissing.map((item) => (
-                          <div key={`${item.label}-${item.summary}`} className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="text-sm font-medium text-neutral-200">{item.label}</p>
-                              <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">
-                                {toTitle(item.kind)}
-                              </span>
-                            </div>
-                            <p className="mt-2 text-sm leading-6 text-neutral-400">{item.summary}</p>
+                          <div className="space-y-3">
+                            {caseFile.ruleTrace.map((item) => (
+                              <div key={item.rule} className="rounded-[22px] border border-white/8 bg-black/20 p-4">
+                                <div className="flex items-start gap-3">
+                                  <div className="mt-0.5">{ruleIcon(item.verdict)}</div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="text-sm font-medium text-neutral-100">{item.rule}</p>
+                                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] ${ruleTone(item.verdict)}`}>
+                                        {item.verdict}
+                                      </span>
+                                    </div>
+                                    <p className="mt-2 text-sm leading-6 text-neutral-400">{item.reason}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-neutral-500">No additional evidence gaps were returned.</p>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div key="evidence-empty" {...panelMotion}>
-                  <EmptyState
-                    icon={<Users className="h-5 w-5" />}
-                    title="Evidence panel appears here"
-                    body="This panel separates what the classifier used from what it still needs, so borderline verdicts become legible."
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.section>
+                        </div>
 
-          <motion.section
-            {...panelMotion}
-            transition={{ ...panelMotion.transition, delay: 0.12 }}
-            className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)]"
-          >
-            <SectionLabel index="04" title="Case file timeline" />
-
-            <AnimatePresence mode="wait">
-              {isSubmitting ? (
-                <motion.div key="timeline-loading" {...panelMotion}>
-                  <LoadingSkeleton compact />
-                </motion.div>
-              ) : caseFile ? (
-                <motion.div
-                  key={`timeline-${caseFile.receiptId}`}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-                  className="flex h-full flex-col"
-                >
-                  <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] p-4 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.08)_1px,transparent_0)] [background-position:0_0] [background-size:14px_14px]">
-                    <ReceiptRow
-                      label="Receipt ID"
-                      value={caseFile.receiptMetadata.receiptId}
-                      copied={copiedField === "receiptId"}
-                      onCopy={() => handleCopy("receiptId", caseFile.receiptMetadata.receiptId)}
-                    />
-                    <div className="mt-3">
-                      <ReceiptRow
-                        label="Hash"
-                        value={caseFile.receiptMetadata.hash}
-                        copied={copiedField === "hash"}
-                        onCopy={() => handleCopy("hash", caseFile.receiptMetadata.hash)}
-                      />
-                    </div>
-                    <div className="mt-3">
-                      <ReceiptRow
-                        label="Timestamp"
-                        value={caseFile.receiptMetadata.timestamp}
-                        copied={copiedField === "timestamp"}
-                        onCopy={() => handleCopy("timestamp", caseFile.receiptMetadata.timestamp)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex flex-col gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsContestOpen(true)}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-[20px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-neutral-200 transition hover:border-white/18 hover:bg-white/[0.05]"
-                    >
-                      <GitBranch className="h-4 w-4" />
-                      Contest this decision
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsOverrideOpen(true)}
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-[20px] border border-cyan-400/20 bg-cyan-400/[0.08] px-4 py-3 text-sm text-cyan-100 transition hover:border-cyan-400/35 hover:bg-cyan-400/[0.12]"
-                    >
-                      <UserRoundCheck className="h-4 w-4" />
-                      Reviewer override
-                    </button>
-                    <a
-                      href={downloadHref}
-                      download={`ovrule-case-file-${caseFile.hash}.json`}
-                      className="text-sm text-neutral-400 transition hover:text-neutral-200"
-                    >
-                      Download as JSON
-                    </a>
-                  </div>
-
-                  <div className="mt-5 flex-1 rounded-[24px] border border-white/8 bg-black/20 p-4">
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-neutral-500">Decision history</p>
-                    <div className="mt-4 space-y-4">
-                      {combinedHistory.length > 0 ? (
-                        combinedHistory.map((event, index) => (
-                          <div key={event.id} className="relative pl-8">
-                            {index < combinedHistory.length - 1 ? (
-                              <div className="absolute left-[7px] top-7 h-[calc(100%+16px)] w-px bg-white/10" />
-                            ) : null}
-                            <div className="absolute left-0 top-1.5 rounded-full border border-white/8 bg-white/[0.04] p-1.5">
-                              {eventIcon(event.eventType)}
+                        <div className="rounded-[28px] border border-white/8 bg-black/20 p-5">
+                          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-neutral-500">Case core</p>
+                          <div className="mt-4 space-y-4">
+                            <div>
+                              <p className="text-sm font-medium text-neutral-100">Proposed action</p>
+                              <p className="mt-2 text-sm leading-7 text-neutral-400">{caseFile.proposedAction}</p>
                             </div>
                             <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-medium text-neutral-200">
-                                  {eventLabel(event.eventType)}
-                                </span>
-                                <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-                                  {event.actorLabel ?? event.actorType}
-                                </span>
+                              <p className="text-sm font-medium text-neutral-100">Affected parties</p>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {caseFile.affectedParties.map((party) => (
+                                  <span
+                                    key={`${party.label}-${party.type}`}
+                                    className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-2 text-xs text-neutral-300"
+                                  >
+                                    {party.label} · {party.type} · {party.impact}
+                                  </span>
+                                ))}
                               </div>
-                              <p className="mt-1 text-xs text-neutral-500">{event.createdAt}</p>
-                              {event.note ? (
-                                <p className="mt-2 text-sm leading-6 text-neutral-400">{event.note}</p>
-                              ) : null}
                             </div>
                           </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-neutral-500">No timeline events yet.</p>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div key="timeline-empty" {...panelMotion}>
-                  <EmptyState
-                    icon={<Fingerprint className="h-5 w-5" />}
-                    title="Receipt and history appear here"
-                    body="Metadata, contests, reviewer overrides, and revisions will stack into a signed case timeline."
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.section>
-        </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </motion.section>
 
-        {showChrome ? (
-          <footer className="mt-5 flex flex-col gap-3 border-t border-white/8 pt-4 text-sm text-neutral-500 sm:flex-row sm:items-center sm:justify-between">
-            <p>Built with Codex. Ela Kumuk · 2026.</p>
-            <div className="flex gap-4">
-              <a href={githubUrl} target="_blank" rel="noreferrer" className="transition hover:text-neutral-200">
-                GitHub
-              </a>
-              <a href={liveUrl} target="_blank" rel="noreferrer" className="transition hover:text-neutral-200">
-                Live URL
-              </a>
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <motion.section
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.34, delay: 0.14, ease: [0.16, 1, 0.3, 1] }}
+                    className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
+                  >
+                    <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Evidence and gaps</p>
+                    {isSubmitting || !caseFile ? (
+                      <div className="mt-4">
+                        <LoadingBlock />
+                      </div>
+                    ) : (
+                      <div className="mt-4 space-y-4">
+                        <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
+                          <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-300" />
+                            Evidence used
+                          </div>
+                          <div className="mt-3 space-y-3">
+                            {caseFile.evidenceUsed.map((item) => (
+                              <div key={`${item.label}-${item.summary}`} className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-sm font-medium text-neutral-200">{item.label}</p>
+                                  <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">
+                                    {toTitle(item.kind)}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-sm leading-6 text-neutral-400">{item.summary}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
+                          <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
+                            <FileWarning className="h-4 w-4 text-amber-300" />
+                            Missing information
+                          </div>
+                          <div className="mt-3 space-y-3">
+                            {caseFile.missingInformation.length > 0 ? (
+                              caseFile.missingInformation.map((item) => (
+                                <div key={`${item.field}-${item.couldFlip}`} className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <p className="text-sm font-medium text-neutral-200">{item.field}</p>
+                                    <span className="rounded-full border border-white/8 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+                                      Could flip {item.couldFlip}
+                                    </span>
+                                  </div>
+                                  <p className="mt-2 text-sm leading-6 text-neutral-400">{item.whyItMatters}</p>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-neutral-500">No missing information items were flagged.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="rounded-[24px] border border-white/8 bg-black/20 p-4">
+                          <div className="flex items-center gap-2 text-sm font-medium text-neutral-200">
+                            <BadgeAlert className="h-4 w-4 text-amber-300" />
+                            Evidence still missing
+                          </div>
+                          <div className="mt-3 space-y-3">
+                            {caseFile.evidenceMissing.length > 0 ? (
+                              caseFile.evidenceMissing.map((item) => (
+                                <div key={`${item.label}-${item.summary}`} className="rounded-2xl border border-white/8 bg-white/[0.02] p-3">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <p className="text-sm font-medium text-neutral-200">{item.label}</p>
+                                    <span className="text-[11px] uppercase tracking-[0.2em] text-neutral-500">
+                                      {toTitle(item.kind)}
+                                    </span>
+                                  </div>
+                                  <p className="mt-2 text-sm leading-6 text-neutral-400">{item.summary}</p>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-neutral-500">No additional evidence gaps were returned.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.section>
+
+                  <motion.section
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.34, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                    className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
+                  >
+                    <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Receipt and timeline</p>
+                    {isSubmitting || !caseFile ? (
+                      <div className="mt-4">
+                        <LoadingBlock />
+                      </div>
+                    ) : (
+                      <div className="mt-4 flex h-full flex-col">
+                        <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] p-4 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.08)_1px,transparent_0)] [background-size:14px_14px]">
+                          <ReceiptRow
+                            label="Receipt ID"
+                            value={caseFile.receiptMetadata.receiptId}
+                            copied={copiedField === "receiptId"}
+                            onCopy={() => handleCopy("receiptId", caseFile.receiptMetadata.receiptId)}
+                          />
+                          <div className="mt-3">
+                            <ReceiptRow
+                              label="Hash"
+                              value={caseFile.receiptMetadata.hash}
+                              copied={copiedField === "hash"}
+                              onCopy={() => handleCopy("hash", caseFile.receiptMetadata.hash)}
+                            />
+                          </div>
+                          <div className="mt-3">
+                            <ReceiptRow
+                              label="Timestamp"
+                              value={caseFile.receiptMetadata.timestamp}
+                              copied={copiedField === "timestamp"}
+                              onCopy={() => handleCopy("timestamp", caseFile.receiptMetadata.timestamp)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => setIsContestOpen(true)}
+                            className="inline-flex items-center justify-center gap-2 rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-neutral-200 transition hover:border-white/18 hover:bg-white/[0.05]"
+                          >
+                            <GitBranch className="h-4 w-4" />
+                            Contest this decision
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsOverrideOpen(true)}
+                            className="inline-flex items-center justify-center gap-2 rounded-[18px] border border-cyan-400/20 bg-cyan-400/[0.08] px-4 py-3 text-sm text-cyan-100 transition hover:border-cyan-400/35 hover:bg-cyan-400/[0.12]"
+                          >
+                            <UserRoundCheck className="h-4 w-4" />
+                            Reviewer override
+                          </button>
+                          <a
+                            href={downloadHref}
+                            download={`ovrule-case-file-${caseFile.hash}.json`}
+                            className="inline-flex items-center gap-1.5 px-1 py-3 text-sm text-neutral-400 transition hover:text-neutral-200"
+                          >
+                            Download as JSON
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </a>
+                        </div>
+
+                        <div className="mt-5 flex-1 rounded-[24px] border border-white/8 bg-black/20 p-4">
+                          <p className="text-[11px] uppercase tracking-[0.22em] text-neutral-500">Decision history</p>
+                          <div className="mt-4 space-y-4">
+                            {combinedHistory.length > 0 ? (
+                              combinedHistory.map((event, index) => (
+                                <div key={event.id} className="relative pl-8">
+                                  {index < combinedHistory.length - 1 ? (
+                                    <div className="absolute left-[7px] top-7 h-[calc(100%+16px)] w-px bg-white/10" />
+                                  ) : null}
+                                  <div className="absolute left-0 top-1.5 rounded-full border border-white/8 bg-white/[0.04] p-1.5">
+                                    {eventIcon(event.eventType)}
+                                  </div>
+                                  <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className="text-sm font-medium text-neutral-200">
+                                        {eventLabel(event.eventType)}
+                                      </span>
+                                      <span className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
+                                        {event.actorLabel ?? event.actorType}
+                                      </span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-neutral-500">{event.createdAt}</p>
+                                    {event.note ? (
+                                      <p className="mt-2 text-sm leading-6 text-neutral-400">{event.note}</p>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-neutral-500">No history entries yet.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.section>
+                </div>
+              </div>
             </div>
-          </footer>
-        ) : null}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {error ? (
-          <div className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-2xl border border-red-400/30 bg-red-400/12 px-4 py-3 text-sm text-red-100 shadow-xl shadow-black/30">
-            {error}
-          </div>
-        ) : null}
-        {toastMessage ? (
-          <div className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-2xl border border-emerald-400/30 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100 shadow-xl shadow-black/30">
-            {toastMessage}
-          </div>
-        ) : null}
-      </div>
+      {error ? (
+        <div className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-2xl border border-red-400/30 bg-red-400/12 px-4 py-3 text-sm text-red-100 shadow-xl shadow-black/30">
+          {error}
+        </div>
+      ) : null}
+
+      {toastMessage ? (
+        <div className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-2xl border border-emerald-400/30 bg-emerald-400/12 px-4 py-3 text-sm text-emerald-100 shadow-xl shadow-black/30">
+          {toastMessage}
+        </div>
+      ) : null}
 
       <AnimatePresence>
         {isContestOpen && caseFile ? (
@@ -1168,6 +1124,6 @@ export function DecisionReceiptLab({
           </motion.div>
         ) : null}
       </AnimatePresence>
-    </main>
+    </section>
   );
 }
