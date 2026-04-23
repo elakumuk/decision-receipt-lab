@@ -279,6 +279,7 @@ function normalizeReceipt(receipt: ReceiptWithSuggestions | null) {
       hash: receipt.hash,
       timestamp: receipt.timestamp,
     },
+    signature: receipt.signature ?? "",
     history: receipt.history ?? [],
     challengeHistory: receipt.challengeHistory ?? [],
     suggestedFixes: receipt.suggestedFixes ?? [],
@@ -1289,6 +1290,12 @@ export function DecisionReceiptLab({
                               copied={copiedField === "hash"}
                               onCopy={() => handleCopy("hash", caseFile.receiptMetadata.hash)}
                             />
+                          </div>
+                          <div className="mt-3 flex items-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-3 text-sm text-emerald-100">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span title={`Signature ${caseFile.signature.slice(0, 18)}...`}>
+                              Verified by Ovrule
+                            </span>
                           </div>
                           <div className="mt-3">
                             <ReceiptRow

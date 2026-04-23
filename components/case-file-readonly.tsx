@@ -203,6 +203,10 @@ export function CaseFileReadonly({
             <section className="rounded-[30px] border border-white/8 bg-white/[0.03] p-5">
               <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">What got recorded</p>
               <div className="mt-4 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))] p-4 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.08)_1px,transparent_0)] [background-size:14px_14px]">
+                <div className="mb-3 flex items-center gap-2 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-3 text-sm text-emerald-100">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span title={`Signature ${receipt.signature.slice(0, 18)}...`}>Verified by Ovrule</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => copy(receipt.receiptId, "id")}

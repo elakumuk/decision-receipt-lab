@@ -137,6 +137,7 @@ export const caseFileReceiptSchema = auditClassificationSchema.extend({
   policyPack: z.enum(POLICY_PACK_IDS).optional(),
   receiptId: z.string().uuid(),
   hash: z.string(),
+  signature: z.string(),
   timestamp: z.string(),
   receiptMetadata: z.object({
     receiptId: z.string().uuid(),
@@ -155,6 +156,11 @@ export const fixSuggestionSchema = z.object({
 
 export const suggestFixRequestSchema = z.object({
   receipt: caseFileReceiptSchema,
+});
+
+export const verifyReceiptRequestSchema = z.object({
+  receipt: caseFileReceiptSchema,
+  signature: z.string().min(1, "Signature is required."),
 });
 
 export const suggestFixResponseSchema = z.object({

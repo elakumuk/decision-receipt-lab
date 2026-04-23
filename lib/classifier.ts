@@ -4,6 +4,7 @@ import { getOpenAIClient } from "@/lib/openai";
 import { sha256 } from "@/lib/hash";
 import { getPolicyPack } from "@/lib/policy-packs";
 import type { PolicyCheckResult } from "@/lib/policy-packs/types";
+import { canonicalizeJson, signReceipt } from "@/lib/signing";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   RULE_NAMES,
@@ -433,6 +434,7 @@ function buildCaseFileReceipt(
     policyPack,
     receiptId,
     hash: hash.slice(0, 12),
+    signature: "",
     timestamp,
     receiptMetadata: {
       receiptId,
@@ -482,6 +484,7 @@ async function persistReceipt(
     missing_information: parsed.missingInformation,
     rule_trace: parsed.ruleTrace,
     hash: fullHash,
+    signature: receipt.signature,
     status: "final",
     created_at: receipt.timestamp,
   });
@@ -495,6 +498,7 @@ async function persistReceipt(
         summary: parsed.summary,
         rule_trace: parsed.ruleTrace,
         hash: fullHash,
+        signature: receipt.signature,
         created_at: receipt.timestamp,
       });
 
@@ -998,11 +1002,13 @@ async function buildFinalReceipt(
   policyPack: PolicyPackId = "general",
 ) {
   const hash = sha256(
-    JSON.stringify({
+    canonicalizeJson({
       scenario,
       decision: parsed.decision,
       ruleTrace: parsed.ruleTrace,
       timestamp,
+      receiptId,
+      policyPack,
     }),
   );
 
@@ -1036,6 +1042,7 @@ async function buildFinalReceipt(
     policyPack,
     revisionHistory,
   );
+  receipt.signature = signReceipt(receipt);
   await persistReceipt(receipt, parsed, revision);
   return receipt;
 }

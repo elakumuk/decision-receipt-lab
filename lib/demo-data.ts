@@ -84,6 +84,7 @@ export const demoAdmissibleReceipt: CaseFileReceipt = {
   ],
   receiptId: "ba364c55-a4f7-40e6-9f97-77dd5e95a691",
   hash: "7d8b1eac2f44",
+  signature: "ZGVtby1zaWduYXR1cmUtYWRtaXNzaWJsZQ==",
   timestamp: "2026-04-22T18:38:11.902Z",
   receiptMetadata: {
     receiptId: "ba364c55-a4f7-40e6-9f97-77dd5e95a691",
@@ -203,6 +204,7 @@ export const demoAmbiguousReceipt: CaseFileReceipt = {
   ],
   receiptId: "9fd80cfd-d472-4972-9d2d-eddf89cb3266",
   hash: "40c1237bf0a9",
+  signature: "ZGVtby1zaWduYXR1cmUtYW1iaWd1b3Vz",
   timestamp: "2026-04-22T18:40:52.117Z",
   receiptMetadata: {
     receiptId: "9fd80cfd-d472-4972-9d2d-eddf89cb3266",
@@ -346,6 +348,7 @@ export const demoRefusedReceipt: CaseFileReceipt & { suggestedFixes: FixSuggesti
   ],
   receiptId: "6a5f7ab8-e42b-4480-9f8b-0ff5ad6f7c59",
   hash: "b18f4a72f0ce",
+  signature: "ZGVtby1zaWduYXR1cmUtcmVmdXNlZA==",
   timestamp: "2026-04-22T18:42:17.208Z",
   receiptMetadata: {
     receiptId: "6a5f7ab8-e42b-4480-9f8b-0ff5ad6f7c59",

@@ -7,6 +7,7 @@ const sections = [
   "Classify",
   "Contest",
   "Override",
+  "Verify",
   "Webhooks",
   "Rate limits",
 ] as const;
@@ -26,6 +27,7 @@ const classifyExampleResponse = `{
   ],
   "receiptId": "c83aa5e1-76b2-4e7b-8d38-68abf3f8cc78",
   "hash": "0d92a47ac11f",
+  "signature": "base64-ed25519-signature",
   "timestamp": "2026-04-22T23:15:10.000Z"
 }`;
 
@@ -163,6 +165,26 @@ const reader = response.body?.getReader();`}
   "reviewerName": "Treasury lead",
   "overrideDecision": "annotate",
   "annotation": "Proceed only after callback verification and dual approval."
+}`}
+              />
+            </section>
+
+            <section id="verify">
+              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Verify</p>
+              <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-neutral-50">POST /api/verify</h2>
+              <p className="mt-4 text-sm leading-8 text-neutral-400 sm:text-base">
+                Verify a signed receipt with Ovrule&apos;s signer. Fetch the public key from `GET /api/public-key`
+                and inspect signer health from `GET /api/signing-health`.
+              </p>
+              <DocsCodeBlock
+                language="json"
+                code={`{
+  "receipt": {
+    "receiptId": "c83aa5e1-76b2-4e7b-8d38-68abf3f8cc78",
+    "hash": "0d92a47ac11f",
+    "signature": "base64-ed25519-signature"
+  },
+  "signature": "base64-ed25519-signature"
 }`}
               />
             </section>

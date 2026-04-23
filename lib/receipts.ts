@@ -15,6 +15,7 @@ type ReceiptRow = {
   severity?: CaseFileReceipt["severity"] | null;
   risk_score?: number | null;
   summary: string;
+  signature?: string | null;
   reasoning_for?: string[] | null;
   reasoning_against?: string[] | null;
   missing_information?: CaseFileReceipt["missingInformation"] | null;
@@ -99,6 +100,7 @@ export function mapReceiptRowToCaseFileReceipt(
     ruleTrace: row.rule_trace,
     receiptId: row.id,
     hash: shortHash(row.hash),
+    signature: row.signature ?? "",
     timestamp,
     receiptMetadata: {
       receiptId: row.id,
