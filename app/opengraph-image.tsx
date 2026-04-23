@@ -41,7 +41,7 @@ export default function Image() {
               fontSize: 18,
             }}
           >
-            Built with OpenAI Codex
+            Auditable AI governance
           </div>
         </div>
 

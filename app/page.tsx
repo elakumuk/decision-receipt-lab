@@ -62,12 +62,7 @@ export default function Home({ searchParams }: HomeProps) {
           <div>
             <OvruleWordmark className="h-7 w-auto text-neutral-50" />
             <p className="mt-3 max-w-md text-sm leading-7 text-neutral-400">
-              Auditable case files for AI agent decisions.
-              <br />
-              Refusals, evidence gaps, contests, and reviewer overrides in one record.
-            </p>
-            <p className="mt-4 text-sm text-neutral-500">
-              Built with Codex for the OpenAI Creator Challenge, April 2026.
+              Ovrule · Auditable receipts for AI agent decisions
             </p>
           </div>
 
@@ -78,9 +73,6 @@ export default function Home({ searchParams }: HomeProps) {
             <Link href="/docs" className="transition hover:text-neutral-100">
               Docs
             </Link>
-            <Link href="/demo?state=refused" className="transition hover:text-neutral-100">
-              Demo
-            </Link>
             <a
               href="https://github.com/elakumuk/decision-receipt-lab"
               target="_blank"
@@ -89,7 +81,6 @@ export default function Home({ searchParams }: HomeProps) {
             >
               GitHub
             </a>
-            <span className="sm:col-span-2 sm:justify-self-end">Made by Ela Kumuk.</span>
           </div>
         </div>
       </footer>

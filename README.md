@@ -28,23 +28,6 @@ Public ledger showing the hash chain view of persisted case receipts.
 ![Docs: SDK and API reference](screenshots/docs.png)
 Developer docs covering the SDK, policy packs, verification, and API routes.
 
-## Built With OpenAI Codex
-
-OpenAI Codex was the primary build tool for this project. It scaffolded the original Next.js 14 app, wrote and evolved the GPT-4o-mini classifier prompt, designed the case-file data model, and shipped the governance workflow end to end.
-
-Major Codex-assisted milestones include:
-
-- `c983b14` `feat: case-file data model + enriched classifier`
-- `09e6f8b` `feat: streaming classification with progressive rule reveal`
-- `39c1fbf` `feat: suggest fixes + revision re-audit flow`
-- `1067ba3` `feat: shareable permalinks, public ledger, developer docs`
-- `b055e6f` `feat: policy packs for support, healthcare, finance`
-- `8511219` `feat: ovrule npm SDK with guard + verify`
-- `532a4e4` `feat: cryptographic receipt signing + verify endpoint`
-- `b5d0df7` `fix: use service role key for server-side Supabase operations`
-
-In practice, Codex handled both product and infrastructure work: UI iteration, API routes, structured output schemas, streaming SSE delivery, Supabase persistence, policy-pack merging, the Fix This flow, the npm SDK, and ed25519 receipt signing.
-
 ## Architecture
 
 ```text
@@ -184,4 +167,4 @@ MIT
 
 ## Credits
 
-Built by Ela Kumuk · Brandeis MSBA 2026 · with extensive help from OpenAI Codex, April 2026.
+Built in 8 days for the OpenAI Codex Creator Challenge, April 2026. Codex was the primary coding partner across the app, classifier, SDK, and infrastructure work.
