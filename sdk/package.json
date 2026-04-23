@@ -15,10 +15,11 @@
   "files": [
     "dist",
     "README.md",
+    "bin/ovrule-lab",
     "bin/welcome.js"
   ],
   "bin": {
-    "ovrule-lab": "./bin/welcome.js"
+    "ovrule-lab": "./bin/ovrule-lab"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
