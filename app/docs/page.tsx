@@ -7,6 +7,7 @@ const sections = [
   "Authentication",
   "Classify",
   "Policy Packs",
+  "Comparable Precedents",
   "Contest",
   "Override",
   "Verify",
@@ -262,6 +263,42 @@ const reader = response.body?.getReader();`}
               </p>
             </section>
 
+            <section id="comparable-precedents">
+              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Comparable Precedents</p>
+              <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-neutral-50">Similar past cases</h2>
+              <div className="mt-4 space-y-4 text-sm leading-8 text-neutral-400 sm:text-base">
+                <p>
+                  Ovrule generates a `text-embedding-3-small` embedding for each stored receipt using the proposed action, decision, and rule trace summary. The UI uses that embedding to surface three related cases for reviewer context.
+                </p>
+                <p>
+                  Use `GET /api/similar/:id` to fetch the three closest prior receipts for a case. If the vector column is unavailable or the database has too few cases, Ovrule falls back to a lighter-weight similarity pass and may return an empty list.
+                </p>
+              </div>
+              <div className="mt-6">
+                <DocsCodeBlock
+                  language="bash"
+                  code={`curl https://your-domain/api/similar/c83aa5e1-76b2-4e7b-8d38-68abf3f8cc78`}
+                />
+              </div>
+              <div className="mt-6">
+                <DocsCodeBlock
+                  language="json"
+                  code={`{
+  "similar": [
+    {
+      "id": "0c32ec20-3f28-453f-ad0b-5850a10efe36",
+      "decision": "REFUSED",
+      "summary": "Consent verification was missing for a customer-wide promotional email.",
+      "hash": "9d5e640ea215",
+      "timestamp": "2026-04-23T14:55:00.622Z",
+      "similarity": 0.91
+    }
+  ]
+}`}
+                />
+              </div>
+            </section>
+
             <section id="contest">
               <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Contest</p>
               <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-neutral-50">POST /api/contest</h2>
@@ -311,8 +348,51 @@ const reader = response.body?.getReader();`}
 
             <section id="webhooks">
               <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Webhooks</p>
-              <p className="mt-4 text-sm leading-8 text-neutral-400 sm:text-base">
-                Coming soon: `receipt.created`, `contest.created`, and `override.created` webhook delivery for downstream audit pipelines.
+              <h2 className="mt-4 text-2xl font-semibold tracking-[-0.04em] text-neutral-50">Outbound event delivery</h2>
+              <div className="mt-4 space-y-4 text-sm leading-8 text-neutral-400 sm:text-base">
+                <p>
+                  Register HTTPS endpoints from `/webhooks` or the API and Ovrule will POST signed payloads when receipts, contests, and reviewer overrides are created.
+                </p>
+                <p>
+                  Every delivery includes `X-Ovrule-Signature`, an HMAC-SHA256 signature of the raw request body using the webhook secret returned at registration time.
+                </p>
+              </div>
+              <div className="mt-6 space-y-6">
+                <DocsCodeBlock
+                  language="bash"
+                  code={`curl -X POST https://your-domain/api/webhooks \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "url": "https://example.com/ovrule",
+    "events": ["receipt.created", "contest.created"]
+  }'`}
+                />
+                <DocsCodeBlock
+                  language="json"
+                  code={`{
+  "event": "receipt.created",
+  "data": {
+    "receiptId": "0c32ec20-3f28-453f-ad0b-5850a10efe36",
+    "decision": "REFUSED",
+    "policyPack": "customer_support"
+  },
+  "timestamp": "2026-04-23T14:55:00.622Z"
+}`}
+                />
+                <DocsCodeBlock
+                  language="typescript"
+                  code={`import crypto from "crypto";
+
+const expected = crypto
+  .createHmac("sha256", webhookSecret)
+  .update(rawBody)
+  .digest("hex");
+
+const valid = signature === expected;`}
+                />
+              </div>
+              <p className="mt-6 text-sm leading-8 text-neutral-400 sm:text-base">
+                Management endpoints: `GET /api/webhooks`, `POST /api/webhooks`, `DELETE /api/webhooks/:id`, and `POST /api/webhooks/:id/test`.
               </p>
             </section>
 
@@ -325,13 +405,6 @@ const reader = response.body?.getReader();`}
               </div>
             </section>
 
-            <section>
-              <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">Coming soon</p>
-              <div className="mt-4 space-y-4 text-sm leading-8 text-neutral-400 sm:text-base">
-                <p>Comparable precedents: retrieve similar prior case files to anchor reviewer decisions.</p>
-                <p>Webhooks: forward receipt and contest activity directly into your own systems.</p>
-              </div>
-            </section>
           </div>
         </div>
       </section>
