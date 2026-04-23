@@ -52,6 +52,20 @@ export default function DocsPage() {
               <h1 className="mt-4 text-4xl font-semibold tracking-[-0.06em] text-neutral-50 sm:text-5xl">
                 Ovrule API
               </h1>
+              <div className="mt-6 rounded-[28px] border border-cyan-400/18 bg-cyan-400/[0.06] p-5">
+                <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-cyan-200">Get started</p>
+                <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-base font-medium text-neutral-100">npm install ovrule</p>
+                    <p className="mt-2 text-sm leading-7 text-neutral-400">
+                      Use the SDK when you want a typed client for classify, guard, and receipt verification.
+                    </p>
+                  </div>
+                  <div className="min-w-[220px]">
+                    <DocsCodeBlock language="bash" code={`npm install ovrule`} />
+                  </div>
+                </div>
+              </div>
               <div className="mt-6 space-y-5 text-sm leading-8 text-neutral-400 sm:text-base">
                 <p>
                   Ovrule turns proposed AI agent actions into case files. Instead of a raw model output, you get a verdict, a rule trace, a receipt hash, and a durable history of challenges and overrides.
