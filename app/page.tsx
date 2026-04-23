@@ -3,6 +3,7 @@ import { AboutSection } from "@/components/about-section";
 import { DecisionReceiptLab } from "@/components/decision-receipt-lab";
 import { HeroSection } from "@/components/hero-section";
 import { HowItWorks } from "@/components/how-it-works";
+import { OvruleWordmark } from "@/components/ovrule-wordmark";
 import { StickyHeader } from "@/components/sticky-header";
 import { TrustBand } from "@/components/trust-band";
 import { demoRefusedReceipt, demoRefusedScenario } from "@/lib/demo-data";
@@ -55,7 +56,7 @@ export default function Home({ searchParams }: HomeProps) {
       <footer className="border-t border-white/8 py-16">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
           <div>
-            <p className="text-[18px] font-semibold tracking-[-0.03em] text-neutral-50">Ovrule</p>
+            <OvruleWordmark className="h-7 w-auto text-neutral-50" />
             <p className="mt-3 max-w-md text-sm leading-7 text-neutral-400">
               Auditable case files for AI agent decisions.
               <br />

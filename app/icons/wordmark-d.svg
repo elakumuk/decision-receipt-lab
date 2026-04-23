@@ -1,0 +1,6 @@
+<svg width="320" height="72" viewBox="0 0 320 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="30" cy="36" r="14" stroke="#111111" stroke-width="4.4"/>
+  <path d="M41 35L48 42.5L59 26.5" stroke="#111111" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M30 22V50" stroke="#111111" stroke-width="1.4" opacity="0.22"/>
+  <text x="82" y="46" fill="#111111" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="30" font-weight="600" letter-spacing="-0.04em">Ovrule</text>
+</svg>

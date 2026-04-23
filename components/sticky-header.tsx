@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OvruleWordmark } from "@/components/ovrule-wordmark";
 
 const links: Array<{ href: string; label: string; external?: boolean }> = [
   { href: "/demo?state=refused", label: "Live demo" },
@@ -12,7 +13,7 @@ export function StickyHeader() {
     <header className="sticky top-0 z-40 border-b border-white/8 bg-[#0a0a0b]/85 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <Link href="/" className="text-[18px] font-semibold tracking-[-0.03em] text-neutral-50">
-          Ovrule
+          <OvruleWordmark className="h-7 w-auto text-neutral-50" />
         </Link>
 
         <nav className="hidden items-center gap-5 text-sm text-neutral-400 md:flex">
