@@ -586,14 +586,6 @@ async function persistReceipt(
     }
   }
 
-  await triggerWebhookEvent("receipt.created", {
-    receiptId: receipt.receiptId,
-    decision: receipt.decision,
-    policyPack: receipt.policyPack ?? "general",
-    summary: receipt.summary,
-    timestamp: receipt.timestamp,
-    receipt,
-  });
 }
 
 async function persistReceiptEmbedding(receipt: CaseFileReceipt) {
@@ -635,6 +627,32 @@ async function persistReceiptEmbedding(receipt: CaseFileReceipt) {
   } catch (error) {
     console.error("Failed to generate receipt embedding", error);
   }
+}
+
+function queueReceiptSideEffects(receipt: CaseFileReceipt) {
+  const tasks = [
+    persistReceiptEmbedding(receipt),
+    triggerWebhookEvent("receipt.created", {
+      receiptId: receipt.receiptId,
+      decision: receipt.decision,
+      policyPack: receipt.policyPack ?? "general",
+      summary: receipt.summary,
+      timestamp: receipt.timestamp,
+      receipt,
+    }),
+  ];
+
+  void Promise.allSettled(tasks).then((results) => {
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error("[classify] post-receipt side effect failed", {
+          receiptId: receipt.receiptId,
+          task: index === 0 ? "embedding" : "webhook",
+          error: result.reason,
+        });
+      }
+    });
+  });
 }
 
 async function evaluateRuleWithStreaming(client: OpenAI, scenario: string, rule: RuleName): Promise<AuditRule> {
@@ -1122,7 +1140,7 @@ async function buildFinalReceipt(
     hasSignature: Boolean(receipt.signature),
   });
   await persistReceipt(receipt, parsed, revision);
-  await persistReceiptEmbedding(receipt);
+  queueReceiptSideEffects(receipt);
   return receipt;
 }
 
