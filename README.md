@@ -167,4 +167,4 @@ MIT
 
 ## Credits
 
-Built in 8 days for the OpenAI Codex Creator Challenge, April 2026. Codex was the primary coding partner across the app, classifier, SDK, and infrastructure work.
+Built in April 2026. Codex was the primary coding partner across the app, classifier, SDK, and infrastructure work.
