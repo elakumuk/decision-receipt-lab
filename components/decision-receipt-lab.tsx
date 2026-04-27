@@ -22,7 +22,7 @@ import {
   UserRoundCheck,
   XCircle,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { SimilarCasesSection } from "@/components/similar-cases-section";
 import type {
@@ -516,6 +516,8 @@ export function DecisionReceiptLab({
   const [decisionGlow, setDecisionGlow] = useState<"improved" | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const fallbackTimerRef = useRef<number | null>(null);
+  const receiptArrivedRef = useRef(false);
 
   const caseFile = normalizeReceipt(receipt);
   const tone = caseFile ? surfaceTone(caseFile.decision) : null;
@@ -541,6 +543,15 @@ export function DecisionReceiptLab({
     : "";
 
   const showWorkspace = Boolean(caseFile || streamState || isSubmitting);
+
+  useEffect(() => {
+    return () => {
+      if (fallbackTimerRef.current) {
+        window.clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!caseFile?.receiptId) {
@@ -595,30 +606,36 @@ export function DecisionReceiptLab({
     setSuggestions([]);
     setShowFixes(false);
     setDecisionGlow(null);
+    receiptArrivedRef.current = false;
+    if (fallbackTimerRef.current) {
+      window.clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
     setStreamState({
       rules: RULE_SEQUENCE.map((rule) => ({ rule, status: "pending" })),
     });
 
     try {
-      let finalEventReceived = false;
-      let fallbackTimer: number | null = null;
       let latestReceiptId: string | undefined;
 
       const clearFallbackTimer = () => {
-        if (fallbackTimer) {
-          window.clearTimeout(fallbackTimer);
-          fallbackTimer = null;
+        if (fallbackTimerRef.current) {
+          window.clearTimeout(fallbackTimerRef.current);
+          fallbackTimerRef.current = null;
         }
       };
 
       const scheduleFinalFallback = () => {
         clearFallbackTimer();
-        fallbackTimer = window.setTimeout(async () => {
-          if (finalEventReceived) {
+        fallbackTimerRef.current = window.setTimeout(async () => {
+          if (receiptArrivedRef.current) {
             return;
           }
 
           if (!latestReceiptId) {
+            if (receiptArrivedRef.current) {
+              return;
+            }
             setStreamState(null);
             setError("The audit finished rule checks but never delivered the final case file.");
             return;
@@ -635,17 +652,22 @@ export function DecisionReceiptLab({
             console.info("[classify-client] fallback receipt fetch succeeded", {
               receiptId: fallbackReceipt.receiptId,
             });
+            receiptArrivedRef.current = true;
             setReceipt(fallbackReceipt);
             setScenario(fallbackReceipt.scenario);
             setStreamState(null);
+            setError(null);
           } catch (fallbackError) {
+            if (receiptArrivedRef.current) {
+              return;
+            }
             console.error("[classify-client] fallback receipt fetch failed", fallbackError);
             setStreamState(null);
             setError(
               "The audit completed rule evaluation, but the final case file did not arrive. Please retry.",
             );
           }
-        }, 10_000);
+        }, 90_000);
       };
 
       const response = await fetch("/api/classify", {
@@ -741,7 +763,7 @@ export function DecisionReceiptLab({
           }
 
           if (payload.type === "analysis.completed") {
-            finalEventReceived = true;
+            receiptArrivedRef.current = true;
             clearFallbackTimer();
             console.info("[classify-client] received analysis.completed", {
               receiptId: payload.receipt.receiptId,
@@ -749,6 +771,7 @@ export function DecisionReceiptLab({
             });
             setReceipt(payload.receipt);
             setScenario(payload.receipt.scenario);
+            setError(null);
             if (
               options?.previousDecision &&
               decisionRank(payload.receipt.decision) < decisionRank(options.previousDecision)
@@ -766,6 +789,10 @@ export function DecisionReceiptLab({
         }
       }
     } catch (caughtError) {
+      if (fallbackTimerRef.current) {
+        window.clearTimeout(fallbackTimerRef.current);
+        fallbackTimerRef.current = null;
+      }
       setStreamState(null);
       setError(caughtError instanceof Error ? caughtError.message : "Unable to classify this action.");
     } finally {
@@ -1505,7 +1532,7 @@ export function DecisionReceiptLab({
         )}
       </AnimatePresence>
 
-      {error ? (
+      {error && !caseFile ? (
         <div className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-2xl border border-red-400/30 bg-red-400/12 px-4 py-3 text-sm text-red-100 shadow-xl shadow-black/30">
           {error}
         </div>
