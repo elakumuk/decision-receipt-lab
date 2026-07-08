@@ -6,8 +6,8 @@ import { useState } from "react";
 import { OvruleWordmark } from "@/components/ovrule-wordmark";
 
 const links: Array<{ href: string; label: string; external?: boolean }> = [
+  { href: "/payments", label: "Payments" },
   { href: "/inbox", label: "Inbox" },
-  { href: "/#how-it-works", label: "How it works" },
   { href: "/evidence", label: "Evidence" },
   { href: "https://github.com/elakumuk/decision-receipt-lab", label: "GitHub", external: true },
 ];
