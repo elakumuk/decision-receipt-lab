@@ -7,7 +7,7 @@ const AGENT_ID = process.env.MARITIME_AGENT_ID ?? "1b84cf32-2b70-4bf8-afa6-9aab2
 
 const schema = z.object({
   task: z.string().min(1, "task is required").max(4000),
-  policyPack: z.enum(["general", "finance", "healthcare", "customer-support"]).optional(),
+  policyPack: z.enum(["general", "finance", "healthcare", "customer_support", "payments"]).optional(),
 });
 
 /**

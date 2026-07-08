@@ -17,7 +17,7 @@ export type PolicyCheck = {
 };
 
 export type PolicyPack = {
-  id: "general" | "customer_support" | "healthcare" | "finance";
+  id: "general" | "customer_support" | "healthcare" | "finance" | "payments";
   label: string;
   description: string;
   guidance: string[];

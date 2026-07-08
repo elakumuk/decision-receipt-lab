@@ -14,6 +14,7 @@ export const POLICY_PACK_IDS = [
   "customer_support",
   "healthcare",
   "finance",
+  "payments",
 ] as const;
 
 export const WEBHOOK_EVENT_TYPES = [

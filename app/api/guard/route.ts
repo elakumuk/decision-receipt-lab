@@ -3,7 +3,7 @@ import { guardAction } from "@/lib/guard";
 
 const guardRequestSchema = z.object({
   action: z.string().min(1, "action is required").max(4000),
-  policyPack: z.enum(["general", "finance", "healthcare", "customer-support"]).optional(),
+  policyPack: z.enum(["general", "finance", "healthcare", "customer_support", "payments"]).optional(),
   blockOn: z.array(z.enum(["ADMISSIBLE", "AMBIGUOUS", "REFUSED"])).optional(),
 });
 
