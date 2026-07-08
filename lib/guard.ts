@@ -75,3 +75,24 @@ export async function runGuarded<T>(
   const result = await execute();
   return { result, guard };
 }
+
+/**
+ * Drop-in tool wrapper. Turn any agent tool/action into a guarded version in one
+ * line — the returned function audits the action before running the real tool,
+ * so a REFUSED action throws GuardBlockedError and never executes.
+ *
+ * Example (any agent framework):
+ *   const safeTransfer = guardTool(
+ *     bankApi.transfer,
+ *     (a) => `Transfer $${a.amount} to vendor ${a.to}`,
+ *     { policyPack: "finance" },
+ *   );
+ *   await safeTransfer({ amount: 5000, to: "acct-9931" }); // blocked if REFUSED
+ */
+export function guardTool<A extends unknown[], R>(
+  tool: (...args: A) => Promise<R>,
+  describe: (...args: A) => string,
+  options: GuardOptions = {},
+): (...args: A) => Promise<{ result: R; guard: GuardResult }> {
+  return (...args: A) => runGuarded(describe(...args), () => tool(...args), options);
+}
