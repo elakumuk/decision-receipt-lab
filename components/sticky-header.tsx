@@ -7,11 +7,8 @@ import { OvruleWordmark } from "@/components/ovrule-wordmark";
 
 const links: Array<{ href: string; label: string; external?: boolean }> = [
   { href: "/inbox", label: "Inbox" },
+  { href: "/#how-it-works", label: "How it works" },
   { href: "/evidence", label: "Evidence" },
-  { href: "/ledger", label: "Ledger" },
-  { href: "/docs", label: "Docs" },
-  { href: "/webhooks", label: "Webhooks" },
-  { href: "/demo?state=refused", label: "Demo" },
   { href: "https://github.com/elakumuk/decision-receipt-lab", label: "GitHub", external: true },
 ];
 

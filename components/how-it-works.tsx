@@ -6,18 +6,18 @@ import { Fingerprint, Scale, Stamp } from "lucide-react";
 const steps = [
   {
     icon: Fingerprint,
-    title: "Propose the action",
-    body: "Describe what the agent wants to do in plain English, including the claimed goal and any known permission basis.",
+    title: "The agent tries to act",
+    body: "Before your AI agent makes a payment, shares data, or does anything irreversible, the action is caught — before it happens, not after.",
   },
   {
     icon: Scale,
-    title: "Audit across 6 rules",
-    body: "Ovrule scores the action against safety, authorization, causal validity, reversibility, impact scope, and consent.",
+    title: "Ovrule reviews it in plain English",
+    body: "It checks who's affected, whether it's authorized, reversible, and consented — and writes it up so a non-technical owner can actually read it.",
   },
   {
     icon: Stamp,
-    title: "Receipt, challenge, override",
-    body: "Every outcome becomes a verifiable case file with a hash, trace, challenge history, and reviewer actions.",
+    title: "You decide — on the record",
+    body: "Approve or deny with a reason. Every decision becomes a tamper-evident, signed record you can show a regulator, an insurer, or your team.",
   },
 ] as const;
 
@@ -35,7 +35,7 @@ export function HowItWorks() {
         <div className="max-w-2xl">
           <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">How it works</p>
           <h2 className="mt-4 text-3xl font-semibold tracking-[-0.05em] text-neutral-50 sm:text-4xl">
-            Three moves from action to audit trail.
+            Three steps from a risky action to a decision you can defend.
           </h2>
         </div>
 

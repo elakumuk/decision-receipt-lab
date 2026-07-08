@@ -79,10 +79,10 @@ export function HeroSection() {
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="#tool"
+                href="/inbox"
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-neutral-100 px-5 py-3 text-sm font-medium text-neutral-950 transition hover:bg-white"
               >
-                Try a case
+                Open the inbox
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <button

@@ -1,7 +1,7 @@
 export const heroCopy = {
-  headline: "When AI makes a call, who signs it?",
+  headline: "Don't let your AI agent do something you'll answer for.",
   subhead:
-    "Ovrule gives every agent decision a receipt, a risk trace, and a path to challenge it.",
+    "When an agent is about to make a payment, share data, or take an irreversible action, Ovrule stops it for a human — in plain English — and keeps a tamper-evident record of who decided what.",
 } as const;
 
 export const scenarioCards = [
