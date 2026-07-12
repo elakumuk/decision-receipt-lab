@@ -13,10 +13,10 @@ export const paymentsPolicyPack: PolicyPack = {
   description:
     "Payment-change, refund, and payout controls tuned for vendor bank-detail (BEC) fraud and irreversible transfers.",
   guidance: [
-    "Verify payment-destination changes out of band before any release of funds.",
-    "Treat urgency, secrecy, and exception requests as risk multipliers, not reasons to bypass control.",
-    "Confirm the requester has authority for this action and that approval thresholds are satisfied.",
-    "Prefer reversible holds and documented callbacks over immediate payout when evidence is incomplete.",
+    "Escalate ONLY when a real red flag is present: a changed or new payment destination, urgency or secrecy pressure, a first-time payee, missing out-of-band verification, an over-threshold amount, or a requester/authority mismatch.",
+    "A routine payment to an already-verified account, within approval limits, with a matching approver and no change or urgency, should PASS normally — never hold or fail a legitimate payment just because this pack is about payments.",
+    "When a red flag IS present, weigh missing verification and irreversibility heavily against authorization and safety, and prefer a hold or callback over immediate payout.",
+    "Judge each of the six rules on its own merits for the specific scenario. The pack sharpens fraud detection; it does not make every payment fail.",
   ],
   ruleBias: {
     SAFETY: "stricter",
