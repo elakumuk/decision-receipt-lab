@@ -63,10 +63,12 @@ export function PaymentsIntake() {
         body: JSON.stringify({ action: text, policyPack: "payments" }),
       });
       const data = await res.json();
-      if (!res.ok || data.error) {
-        setError(data.error ?? "The reviewer is unavailable. Try again in a moment.");
-      } else {
+      // The guard returns 403 for a blocked (REFUSED) action — that is a valid
+      // result to show (HOLD), not an error. Only error when there is no decision.
+      if (data && data.decision) {
         setResult(data);
+      } else {
+        setError(data.error ?? "The reviewer is unavailable. Try again in a moment.");
       }
     } catch {
       setError("Something went wrong. Try again.");
