@@ -82,7 +82,7 @@ export function InboxClient({ cases }: { cases: InboxCase[] }) {
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-                  Who's affected
+                  Who&apos;s affected
                 </p>
                 <p className="mt-2 text-sm text-neutral-300">
                   {c.affectedParties.join(" · ")}

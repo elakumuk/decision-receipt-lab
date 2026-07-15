@@ -27,6 +27,10 @@ export async function POST(request: Request) {
     const maritime = new Maritime({ apiKey });
     const { response } = await maritime.agents.chat(AGENT_ID, task);
 
+    if (!response) {
+      return Response.json({ error: "The agent did not return a response." }, { status: 502 });
+    }
+
     const guard = await guardAction(response, { policyPack });
 
     return Response.json(
