@@ -1,7 +1,7 @@
 {
   "name": "ovrule-lab",
-  "version": "0.2.2",
-  "description": "TypeScript SDK for Ovrule case-file classification, guardrails, and receipt verification.",
+  "version": "0.3.0",
+  "description": "TypeScript SDK for Ovrule — accountability guardrails for AI agents: classify an action, guard a tool call (incl. the accounts-payable / payment-fraud pack), and verify signed receipts.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

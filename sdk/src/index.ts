@@ -2,7 +2,7 @@ import { getDefaultBaseUrl, isQuietModeEnabled, logBanner, SDK_VERSION } from ".
 
 export type Decision = "ADMISSIBLE" | "AMBIGUOUS" | "REFUSED";
 export type Verdict = "PASS" | "WARN" | "FAIL";
-export type PolicyPackId = "general" | "customer_support" | "healthcare" | "finance";
+export type PolicyPackId = "general" | "customer_support" | "healthcare" | "finance" | "payments";
 
 export type RuleName =
   | "SAFETY"
