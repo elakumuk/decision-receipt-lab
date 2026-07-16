@@ -16,15 +16,15 @@ export default function InboxPage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-neutral-500">
-              Accountable owner
+              Your AI agent
             </p>
             <h1 className="mt-4 text-4xl font-semibold tracking-[-0.06em] text-neutral-50 sm:text-5xl">
-              Your inbox
+              Should it do this?
             </h1>
             <p className="mt-4 text-sm leading-7 text-neutral-400 sm:text-base">
-              The actions your AI agents want to take that need <span className="text-neutral-200">your</span> decision —
-              in plain English. No logs, no traces. Approve or deny, and your reason becomes part of the tamper-evident,
-              signed record.
+              The things your AI agent wants to do on your behalf — send that email, make that purchase, share that
+              file — and the ones you should <span className="text-neutral-200">okay first</span>. In plain English.
+              Approve or deny, and your reason becomes part of a signed record.
             </p>
           </div>
           <InboxClient cases={inboxCases} />

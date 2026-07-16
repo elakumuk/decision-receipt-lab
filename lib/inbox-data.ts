@@ -19,68 +19,67 @@ export interface InboxCase {
   whyNeedsHuman: string;
 }
 
-// Seed cases surfaced by a live agent for the accountable-owner demo. These are
-// the actions an AI agent wanted to take that a plain content filter would wave
-// through, but that a governance review flags for a human decision.
+// Everyday actions an AI agent might take on your behalf that a plain content
+// filter would wave through, but that you'd want to okay first.
 export const inboxCases: InboxCase[] = [
   {
-    id: "vip-transcript",
-    context: "Customer support",
-    title: "Quiet VIP escalation with transcript sharing",
+    id: "rent-increase",
+    context: "Personal · email",
+    title: "Accepting a rent increase for you",
     proposedAction:
-      "Forward a frustrated enterprise customer's full chat transcript — including prior billing notes and internal tags — to a senior account executive's personal email so they can respond faster tonight.",
-    affectedParties: ["Enterprise customer", "Account executive", "Support team"],
-    triggeredRules: ["AUTHORIZATION", "CONSENT", "IMPACT SCOPE"],
-    decision: "AMBIGUOUS",
-    whyNeedsHuman:
-      "Looks helpful, but it moves customer data to an unapproved personal channel — an owner must decide if that disclosure is justified.",
-  },
-  {
-    id: "vendor-payment",
-    context: "Finance",
-    title: "Urgent vendor payment to new bank details",
-    proposedAction:
-      "Pay a $5,000 overdue supplier invoice today using new bank account details that arrived in a recent email thread marked urgent.",
-    affectedParties: ["Supplier", "Finance team", "Company bank account"],
-    triggeredRules: ["SAFETY", "AUTHORIZATION", "CAUSAL VALIDITY", "REVERSIBILITY"],
+      "Your assistant is about to email your landlord accepting a 15% rent increase because it “seems unavoidable.”",
+    affectedParties: ["You", "Your landlord"],
+    triggeredRules: ["AUTHORIZATION", "CONSENT", "REVERSIBILITY"],
     decision: "REFUSED",
     whyNeedsHuman:
-      "The payment is financially irreversible and rests on a bank-change instruction that needs out-of-band verification the agent cannot do from email alone.",
+      "It commits you to money and a contract you never explicitly approved — that's your call, not the agent's.",
   },
   {
-    id: "reference-reveal",
-    context: "HR / Recruiting",
-    title: "Confidential job-search inference in a reference check",
+    id: "nonrefundable-trip",
+    context: "Personal · travel",
+    title: "Auto-booking a non-refundable trip",
     proposedAction:
-      "Email the hiring manager that a candidate appears to be job-searching confidentially, inferred from a reference sent by a current coworker's personal address.",
-    affectedParties: ["Job candidate", "Hiring manager", "Reference provider"],
-    triggeredRules: ["CONSENT", "CAUSAL VALIDITY", "IMPACT SCOPE"],
-    decision: "AMBIGUOUS",
-    whyNeedsHuman:
-      "The inference is plausible but speculative, and sharing it could unfairly harm the candidate without consent or a verified business need.",
-  },
-  {
-    id: "badge-workaround",
-    context: "Operations",
-    title: "Physical access workaround with a shared badge",
-    proposedAction:
-      "Text a contractor the door code and suggest they use a teammate's shared facility badge, because their own access isn't active yet and the repair window is closing.",
-    affectedParties: ["Contractor", "Facility staff", "People in the building"],
-    triggeredRules: ["SAFETY", "AUTHORIZATION", "REVERSIBILITY"],
+      "A travel agent is about to book a $1,400 non-refundable flight on your saved card without asking you to confirm.",
+    affectedParties: ["You", "Your card"],
+    triggeredRules: ["REVERSIBILITY", "CONSENT", "IMPACT SCOPE"],
     decision: "REFUSED",
     whyNeedsHuman:
-      "It reads as a practical fix, but it bypasses physical access controls and creates a safety and accountability risk that shouldn't be auto-approved.",
+      "It's irreversible and expensive, and you never confirmed the final purchase.",
   },
   {
-    id: "audience-expansion",
-    context: "Marketing",
-    title: "Reusing webinar leads for an upsell campaign",
+    id: "share-ssn",
+    context: "Personal · privacy",
+    title: "Sharing your SSN to speed up a signup",
     proposedAction:
-      "Add recent webinar attendees into the existing customer upsell campaign because they engaged with related content and conversion is time-sensitive.",
-    affectedParties: ["Webinar attendees", "Marketing team", "Sales team"],
-    triggeredRules: ["CONSENT", "AUTHORIZATION", "IMPACT SCOPE"],
+      "An agent is about to upload a document with your Social Security number and home address to a third-party site to finish a signup faster.",
+    affectedParties: ["You"],
+    triggeredRules: ["SAFETY", "CONSENT", "IMPACT SCOPE"],
+    decision: "REFUSED",
+    whyNeedsHuman:
+      "It exposes your most sensitive data to a third party you never vetted.",
+  },
+  {
+    id: "post-in-your-voice",
+    context: "Personal · social",
+    title: "Replying in your voice on social",
+    proposedAction:
+      "Your agent wants to post a reply in your voice to a heated thread, to “defend your point” while you're away.",
+    affectedParties: ["You", "Your followers"],
+    triggeredRules: ["IMPACT SCOPE", "CONSENT", "CAUSAL VALIDITY"],
     decision: "AMBIGUOUS",
     whyNeedsHuman:
-      "The message may be routine, but reusing contact data across a new purpose can exceed the original consent — a business owner must judge it.",
+      "It speaks for you publicly in a charged moment — a reputation call only you should make.",
+  },
+  {
+    id: "delete-account",
+    context: "Personal · accounts",
+    title: "Canceling an account to “save you money”",
+    proposedAction:
+      "To cut costs, your agent is about to cancel a subscription and delete the account, which erases your saved history.",
+    affectedParties: ["You"],
+    triggeredRules: ["REVERSIBILITY", "CONSENT"],
+    decision: "AMBIGUOUS",
+    whyNeedsHuman:
+      "Deleting the account is irreversible, and you may still want the history or the service.",
   },
 ];
