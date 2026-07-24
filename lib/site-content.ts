@@ -1,7 +1,7 @@
 export const heroCopy = {
-  headline: "Don't let your AI agent do something you'll answer for.",
+  headline: "Stop your AI agent before it nukes prod.",
   subhead:
-    "When an agent is about to make a payment, share data, or take an irreversible action, Ovrule stops it for a human — in plain English — and keeps a tamper-evident record of who decided what.",
+    "AI agents now run commands, move money, and act on their own. Ovrule reviews what an agent is about to do — before it runs — and blocks the dangerous, irreversible ones, with a plain-English signed record.",
 } as const;
 
 export const scenarioCards = [
